@@ -2,16 +2,20 @@
   "name": "@ai-service-exposure/debugger",
   "version": "0.0.1",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
   "scripts": {
-    "start": "tsx src/index.ts",
-    "dump": "tsx src/index.ts dump",
-    "watch": "tsx src/index.ts watch"
+    "start": "tsx src/cli.ts",
+    "server": "tsx src/server.ts"
   },
   "dependencies": {
     "@ai-service-exposure/core": "workspace:*",
-    "puppeteer": "^23.0.0"
+    "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/ws": "^8.5.10",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }

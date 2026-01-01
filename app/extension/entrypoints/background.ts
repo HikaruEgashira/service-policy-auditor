@@ -8,6 +8,7 @@ import type {
   CookieSetDetails,
 } from "@ai-service-exposure/core";
 import { startCookieMonitor, onCookieChange } from "@/utils/cookie-monitor";
+import { initDebugClient } from "@/utils/debug-client";
 
 const MAX_EVENTS = 1000;
 
@@ -165,16 +166,20 @@ async function handlePageAnalysis(analysis: PageAnalysis) {
 }
 
 export default defineBackground(() => {
-  chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === "PAGE_ANALYZED") {
-      handlePageAnalysis(message.payload).catch((error) => {
-        console.error(
-          "[AI Service Exposure] Error handling page analysis:",
-          error
-        );
-      });
+      handlePageAnalysis(message.payload)
+        .then(() => sendResponse({ success: true }))
+        .catch((error) => {
+          console.error(
+            "[AI Service Exposure] Error handling page analysis:",
+            error
+          );
+          sendResponse({ success: false, error: String(error) });
+        });
+      return true;
     }
-    return true;
+    return false;
   });
 
   startCookieMonitor();
@@ -202,6 +207,16 @@ export default defineBackground(() => {
   });
 
   updateBadge();
+
+  if (import.meta.env.DEV && import.meta.env.VITE_DEBUG === "true") {
+    initDebugClient(
+      initStorage,
+      async () => {
+        await chrome.storage.local.clear();
+        await updateBadge();
+      }
+    );
+  }
 
   console.log("[AI Service Exposure] Background service worker started");
 });

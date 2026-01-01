@@ -16,6 +16,7 @@ declare global {
   const detectLoginPage: typeof import('/Users/hikae/ghq/github.com/HikaruEgashira/ai-service-exposure/app/extension/utils/login-detector').detectLoginPage
   const fakeBrowser: typeof import('wxt/testing').fakeBrowser
   const findPrivacyPolicy: typeof import('/Users/hikae/ghq/github.com/HikaruEgashira/ai-service-exposure/app/extension/utils/privacy-finder').findPrivacyPolicy
+  const initDebugClient: typeof import('/Users/hikae/ghq/github.com/HikaruEgashira/ai-service-exposure/app/extension/utils/debug-client').initDebugClient
   const injectScript: typeof import('wxt/utils/inject-script').injectScript
   const isLoginPage: typeof import('/Users/hikae/ghq/github.com/HikaruEgashira/ai-service-exposure/app/extension/utils/login-detector').isLoginPage
   const onCookieChange: typeof import('/Users/hikae/ghq/github.com/HikaruEgashira/ai-service-exposure/app/extension/utils/cookie-monitor').onCookieChange

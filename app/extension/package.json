@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
+    "dev:debug": "VITE_DEBUG=true wxt",
     "build": "wxt build"
   },
   "dependencies": {
