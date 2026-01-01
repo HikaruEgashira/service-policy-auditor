@@ -8,7 +8,6 @@ export function startCookieMonitor() {
   chrome.cookies.onChanged.addListener((changeInfo) => {
     const { cookie, removed } = changeInfo;
 
-    // Only track session-related cookies
     if (!isSessionCookie(cookie.name)) {
       return;
     }
@@ -17,10 +16,9 @@ export function startCookieMonitor() {
       name: cookie.name,
       domain: cookie.domain,
       detectedAt: Date.now(),
-      isSession: !cookie.expirationDate, // Session cookies have no expiration
+      isSession: !cookie.expirationDate,
     };
 
-    // Notify all listeners
     for (const listener of listeners) {
       listener(cookieInfo, removed);
     }

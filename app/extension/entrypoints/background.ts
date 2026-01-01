@@ -7,7 +7,7 @@ import type {
   PrivacyPolicyFoundDetails,
   CookieSetDetails,
 } from "@ai-service-exposure/core";
-import { startCookieMonitor, onCookieChange } from "./cookie-monitor";
+import { startCookieMonitor, onCookieChange } from "@/utils/cookie-monitor";
 
 const MAX_EVENTS = 1000;
 
@@ -32,13 +32,12 @@ async function initStorage(): Promise<StorageData> {
 
 async function saveStorage(data: Partial<StorageData>) {
   await chrome.storage.local.set(data);
-  await updateBadge();
 }
 
 async function updateBadge() {
   try {
-    const storage = await initStorage();
-    const count = Object.keys(storage.services).length;
+    const result = await chrome.storage.local.get(["services"]);
+    const count = Object.keys(result.services || {}).length;
     await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
     await chrome.action.setBadgeBackgroundColor({ color: "#666" });
   } catch (error) {
@@ -51,9 +50,24 @@ function generateEventId(): string {
 }
 
 type NewEvent =
-  | { type: "login_detected"; domain: string; timestamp: number; details: LoginDetectedDetails }
-  | { type: "privacy_policy_found"; domain: string; timestamp: number; details: PrivacyPolicyFoundDetails }
-  | { type: "cookie_set"; domain: string; timestamp: number; details: CookieSetDetails };
+  | {
+      type: "login_detected";
+      domain: string;
+      timestamp: number;
+      details: LoginDetectedDetails;
+    }
+  | {
+      type: "privacy_policy_found";
+      domain: string;
+      timestamp: number;
+      details: PrivacyPolicyFoundDetails;
+    }
+  | {
+      type: "cookie_set";
+      domain: string;
+      timestamp: number;
+      details: CookieSetDetails;
+    };
 
 async function addEvent(event: NewEvent): Promise<EventLog> {
   return queueStorageOperation(async () => {
@@ -65,20 +79,25 @@ async function addEvent(event: NewEvent): Promise<EventLog> {
     storage.events.unshift(newEvent);
     storage.events = storage.events.slice(0, MAX_EVENTS);
     await saveStorage({ events: storage.events });
+    await updateBadge();
     return newEvent;
   });
+}
+
+function createDefaultService(domain: string): DetectedService {
+  return {
+    domain,
+    detectedAt: Date.now(),
+    hasLoginPage: false,
+    privacyPolicyUrl: null,
+    cookies: [],
+  };
 }
 
 async function updateService(domain: string, update: Partial<DetectedService>) {
   return queueStorageOperation(async () => {
     const storage = await initStorage();
-    const existing = storage.services[domain] || {
-      domain,
-      detectedAt: Date.now(),
-      hasLoginPage: false,
-      privacyPolicyUrl: null,
-      cookies: [],
-    };
+    const existing = storage.services[domain] || createDefaultService(domain);
 
     storage.services[domain] = {
       ...existing,
@@ -86,6 +105,7 @@ async function updateService(domain: string, update: Partial<DetectedService>) {
     };
 
     await saveStorage({ services: storage.services });
+    await updateBadge();
   });
 }
 
@@ -94,13 +114,7 @@ async function addCookieToService(domain: string, cookie: CookieInfo) {
     const storage = await initStorage();
 
     if (!storage.services[domain]) {
-      storage.services[domain] = {
-        domain,
-        detectedAt: Date.now(),
-        hasLoginPage: false,
-        privacyPolicyUrl: null,
-        cookies: [],
-      };
+      storage.services[domain] = createDefaultService(domain);
     }
 
     const service = storage.services[domain];
@@ -110,17 +124,9 @@ async function addCookieToService(domain: string, cookie: CookieInfo) {
     }
 
     await saveStorage({ services: storage.services });
+    await updateBadge();
   });
 }
-
-chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
-  if (message.type === "PAGE_ANALYZED") {
-    handlePageAnalysis(message.payload).catch((error) => {
-      console.error("[AI Service Exposure] Error handling page analysis:", error);
-    });
-  }
-  return true;
-});
 
 interface PageAnalysis {
   url: string;
@@ -158,30 +164,44 @@ async function handlePageAnalysis(analysis: PageAnalysis) {
   }
 }
 
-startCookieMonitor();
-
-onCookieChange((cookie, removed) => {
-  if (removed) return;
-
-  const domain = cookie.domain.replace(/^\./, "");
-
-  addCookieToService(domain, cookie).catch((error) => {
-    console.error("[AI Service Exposure] Error adding cookie:", error);
+export default defineBackground(() => {
+  chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+    if (message.type === "PAGE_ANALYZED") {
+      handlePageAnalysis(message.payload).catch((error) => {
+        console.error(
+          "[AI Service Exposure] Error handling page analysis:",
+          error
+        );
+      });
+    }
+    return true;
   });
 
-  addEvent({
-    type: "cookie_set",
-    domain,
-    timestamp: cookie.detectedAt,
-    details: {
-      name: cookie.name,
-      isSession: cookie.isSession,
-    },
-  }).catch((error) => {
-    console.error("[AI Service Exposure] Error adding event:", error);
+  startCookieMonitor();
+
+  onCookieChange((cookie, removed) => {
+    if (removed) return;
+
+    const domain = cookie.domain.replace(/^\./, "");
+
+    addCookieToService(domain, cookie).catch((error) => {
+      console.error("[AI Service Exposure] Error adding cookie:", error);
+    });
+
+    addEvent({
+      type: "cookie_set",
+      domain,
+      timestamp: cookie.detectedAt,
+      details: {
+        name: cookie.name,
+        isSession: cookie.isSession,
+      },
+    }).catch((error) => {
+      console.error("[AI Service Exposure] Error adding event:", error);
+    });
   });
+
+  updateBadge();
+
+  console.log("[AI Service Exposure] Background service worker started");
 });
-
-updateBadge();
-
-console.log("[AI Service Exposure] Background service worker started");

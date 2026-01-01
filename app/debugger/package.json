@@ -1,0 +1,18 @@
+{
+  "name": "@ai-service-exposure/debugger",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dump": "tsx src/index.ts dump",
+    "watch": "tsx src/index.ts watch"
+  },
+  "dependencies": {
+    "@ai-service-exposure/core": "workspace:*",
+    "puppeteer": "^23.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

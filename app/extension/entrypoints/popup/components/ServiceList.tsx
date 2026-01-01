@@ -4,6 +4,22 @@ interface Props {
   services: DetectedService[];
 }
 
+function sanitizeUrl(url: string | null, domain: string): string {
+  if (!url) {
+    return `https://${domain}`;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return `https://${domain}`;
+    }
+    return url;
+  } catch {
+    return `https://${domain}`;
+  }
+}
+
 export function ServiceList({ services }: Props) {
   if (services.length === 0) {
     return (
@@ -32,7 +48,7 @@ function ServiceRow({ service }: { service: DetectedService }) {
 
   return (
     <a
-      href={service.privacyPolicyUrl || `https://${service.domain}`}
+      href={sanitizeUrl(service.privacyPolicyUrl, service.domain)}
       target="_blank"
       rel="noopener noreferrer"
       style={styles.row}

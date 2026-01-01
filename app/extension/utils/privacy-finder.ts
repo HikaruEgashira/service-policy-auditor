@@ -43,7 +43,10 @@ export function findPrivacyPolicy(): PrivacyPolicyResult {
     }
   }
 
-  const allLinks = document.querySelectorAll<HTMLAnchorElement>("a[href]");
+  const MAX_LINKS_TO_SCAN = 500;
+  const allLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]"))
+    .slice(0, MAX_LINKS_TO_SCAN);
+
   for (const link of allLinks) {
     const text = link.textContent?.trim() || "";
     const href = link.href;
