@@ -11,7 +11,6 @@ export interface PrivacyPolicyResult {
 }
 
 export function findPrivacyPolicy(): PrivacyPolicyResult {
-  // Method 1: Check current page URL
   if (isPrivacyUrl(window.location.pathname)) {
     return {
       found: true,
@@ -20,14 +19,12 @@ export function findPrivacyPolicy(): PrivacyPolicyResult {
     };
   }
 
-  // Method 2: Search for links in footer areas
   for (const selector of FOOTER_SELECTORS) {
     const links = document.querySelectorAll<HTMLAnchorElement>(selector);
     for (const link of links) {
       const text = link.textContent?.trim() || "";
       const href = link.href;
 
-      // Check link text
       if (isPrivacyText(text)) {
         return {
           found: true,
@@ -36,7 +33,6 @@ export function findPrivacyPolicy(): PrivacyPolicyResult {
         };
       }
 
-      // Check link URL
       if (href && isPrivacyUrl(href)) {
         return {
           found: true,
@@ -47,7 +43,6 @@ export function findPrivacyPolicy(): PrivacyPolicyResult {
     }
   }
 
-  // Method 3: Search all page links as fallback
   const allLinks = document.querySelectorAll<HTMLAnchorElement>("a[href]");
   for (const link of allLinks) {
     const text = link.textContent?.trim() || "";

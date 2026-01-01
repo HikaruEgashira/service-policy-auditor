@@ -6,7 +6,6 @@ import type {
 } from "@ai-service-exposure/core";
 import { startCookieMonitor, onCookieChange } from "./cookie-monitor";
 
-// Initialize storage
 async function initStorage(): Promise<StorageData> {
   const result = await chrome.storage.local.get(["services", "events"]);
   return {
@@ -38,7 +37,6 @@ async function addEvent(event: Omit<EventLog, "id">) {
     id: generateEventId(),
   };
   storage.events.unshift(newEvent);
-  // Keep only last 1000 events
   storage.events = storage.events.slice(0, 1000);
   await saveStorage({ events: storage.events });
   return newEvent;
@@ -68,7 +66,6 @@ async function updateService(
 async function addCookieToService(domain: string, cookie: CookieInfo) {
   const storage = await initStorage();
 
-  // Create service if it doesn't exist
   if (!storage.services[domain]) {
     storage.services[domain] = {
       domain,
@@ -81,7 +78,6 @@ async function addCookieToService(domain: string, cookie: CookieInfo) {
 
   const service = storage.services[domain];
 
-  // Avoid duplicates
   const exists = service.cookies.some((c) => c.name === cookie.name);
   if (!exists) {
     service.cookies.push(cookie);
@@ -90,7 +86,6 @@ async function addCookieToService(domain: string, cookie: CookieInfo) {
   await saveStorage({ services: storage.services });
 }
 
-// Handle messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "PAGE_ANALYZED") {
     handlePageAnalysis(message.payload);
@@ -118,7 +113,6 @@ interface PageAnalysis {
 async function handlePageAnalysis(analysis: PageAnalysis) {
   const { domain, login, privacy, timestamp } = analysis;
 
-  // Update service info
   if (login.hasPasswordInput || login.isLoginUrl) {
     await updateService(domain, { hasLoginPage: true });
     await addEvent({
@@ -140,7 +134,6 @@ async function handlePageAnalysis(analysis: PageAnalysis) {
   }
 }
 
-// Start cookie monitoring
 startCookieMonitor();
 
 onCookieChange(async (cookie, removed) => {
@@ -161,7 +154,6 @@ onCookieChange(async (cookie, removed) => {
   });
 });
 
-// Initialize badge on startup
 updateBadge();
 
 console.log("[AI Service Exposure] Background service worker started");

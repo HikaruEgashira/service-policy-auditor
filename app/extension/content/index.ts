@@ -30,7 +30,6 @@ function sendToBackground(analysis: PageAnalysis) {
 }
 
 function init() {
-  // Wait for page to be fully loaded
   if (document.readyState === "complete") {
     runAnalysis();
   } else {
@@ -41,7 +40,6 @@ function init() {
 function runAnalysis() {
   const analysis = analyzePage();
 
-  // Only send if we found something interesting
   if (isLoginPage() || analysis.privacy.found) {
     sendToBackground(analysis);
     console.log("[AI Service Exposure] Page analyzed:", analysis);
