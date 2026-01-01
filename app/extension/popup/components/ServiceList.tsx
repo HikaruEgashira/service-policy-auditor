@@ -20,30 +20,32 @@ export function ServiceList({ services }: Props) {
 
   return (
     <div style={styles.list}>
-      {sorted.map((service) => (
-        <ServiceCard key={service.domain} service={service} />
+      {sorted.map((service, i) => (
+        <ServiceCard key={service.domain} service={service} isLast={i === sorted.length - 1} />
       ))}
     </div>
   );
 }
 
-function ServiceCard({ service }: { service: DetectedService }) {
-  const date = new Date(service.detectedAt).toLocaleDateString();
-
+function ServiceCard({ service, isLast }: { service: DetectedService; isLast: boolean }) {
   return (
-    <div style={styles.card}>
+    <div style={{ ...styles.card, ...(isLast ? {} : styles.cardBorder) }}>
       <div style={styles.cardHeader}>
         <span style={styles.domain}>{service.domain}</span>
-        <span style={styles.date}>{date}</span>
+        <div style={styles.tags}>
+          {service.hasLoginPage && <span style={styles.tag}>login</span>}
+          {service.privacyPolicyUrl && <span style={styles.tag}>privacy</span>}
+          {service.cookies.length > 0 && (
+            <span style={styles.tag}>{service.cookies.length} cookies</span>
+          )}
+        </div>
       </div>
 
-      <div style={styles.badges}>
-        {service.hasLoginPage && <span style={styles.badge}>Login</span>}
-        {service.privacyPolicyUrl && <span style={styles.badge}>Privacy</span>}
-        {service.cookies.length > 0 && (
-          <span style={styles.badge}>{service.cookies.length} cookies</span>
-        )}
-      </div>
+      {service.cookies.length > 0 && (
+        <div style={styles.cookies}>
+          {service.cookies.map((c) => c.name).join(", ")}
+        </div>
+      )}
 
       {service.privacyPolicyUrl && (
         <a
@@ -52,21 +54,8 @@ function ServiceCard({ service }: { service: DetectedService }) {
           rel="noopener noreferrer"
           style={styles.link}
         >
-          View Privacy Policy →
+          Privacy Policy ↗
         </a>
-      )}
-
-      {service.cookies.length > 0 && (
-        <div style={styles.cookieList}>
-          {service.cookies.slice(0, 3).map((c) => (
-            <code key={c.name} style={styles.cookieName}>
-              {c.name}
-            </code>
-          ))}
-          {service.cookies.length > 3 && (
-            <span style={styles.cookieMore}>+{service.cookies.length - 3}</span>
-          )}
-        </div>
       )}
     </div>
   );
@@ -74,9 +63,7 @@ function ServiceCard({ service }: { service: DetectedService }) {
 
 const styles: Record<string, React.CSSProperties> = {
   list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
+    padding: "4px 0",
   },
   empty: {
     textAlign: "center",
@@ -85,75 +72,53 @@ const styles: Record<string, React.CSSProperties> = {
   emptyTitle: {
     fontSize: "14px",
     fontWeight: 500,
-    color: "hsl(0 0% 9%)",
+    color: "hsl(0 0% 20%)",
   },
   emptyHint: {
     fontSize: "13px",
     marginTop: "4px",
-    color: "hsl(0 0% 45%)",
+    color: "hsl(0 0% 50%)",
   },
   card: {
-    background: "hsl(0 0% 100%)",
-    borderRadius: "8px",
-    padding: "12px 14px",
-    border: "1px solid hsl(0 0% 90%)",
+    padding: "12px 8px",
+  },
+  cardBorder: {
+    borderBottom: "1px solid hsl(0 0% 92%)",
   },
   cardHeader: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "8px",
+    alignItems: "flex-start",
+    gap: "12px",
   },
   domain: {
     fontWeight: 500,
     fontSize: "14px",
-    color: "hsl(0 0% 9%)",
+    color: "hsl(0 0% 10%)",
   },
-  date: {
+  tags: {
+    display: "flex",
+    gap: "6px",
+    flexShrink: 0,
+  },
+  tag: {
+    fontSize: "11px",
+    color: "hsl(0 0% 50%)",
+  },
+  cookies: {
     fontSize: "12px",
     color: "hsl(0 0% 45%)",
-  },
-  badges: {
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-    marginBottom: "10px",
-  },
-  badge: {
-    fontSize: "11px",
-    padding: "3px 8px",
-    borderRadius: "6px",
-    fontWeight: 500,
-    background: "hsl(0 0% 96%)",
-    color: "hsl(0 0% 32%)",
-    border: "1px solid hsl(0 0% 90%)",
+    marginTop: "6px",
+    fontFamily: "ui-monospace, monospace",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   link: {
-    fontSize: "13px",
-    color: "hsl(0 0% 32%)",
+    fontSize: "12px",
+    color: "hsl(0 0% 40%)",
     textDecoration: "none",
-    display: "block",
-    marginBottom: "8px",
-  },
-  cookieList: {
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-    marginTop: "8px",
-    paddingTop: "8px",
-    borderTop: "1px solid hsl(0 0% 94%)",
-  },
-  cookieName: {
-    fontSize: "11px",
-    background: "hsl(0 0% 96%)",
-    padding: "3px 6px",
-    borderRadius: "4px",
-    fontFamily: "ui-monospace, monospace",
-    color: "hsl(0 0% 32%)",
-  },
-  cookieMore: {
-    fontSize: "11px",
-    color: "hsl(0 0% 45%)",
-    padding: "3px 0",
+    marginTop: "6px",
+    display: "inline-block",
   },
 };

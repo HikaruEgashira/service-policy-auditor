@@ -5,9 +5,9 @@ interface Props {
 }
 
 const EVENT_LABELS: Record<EventLog["type"], string> = {
-  login_detected: "Login",
-  privacy_policy_found: "Privacy",
-  cookie_set: "Cookie",
+  login_detected: "login",
+  privacy_policy_found: "privacy",
+  cookie_set: "cookie",
 };
 
 export function EventLogList({ events }: Props) {
@@ -35,91 +35,65 @@ function EventItem({ event }: { event: EventLog }) {
     minute: "2-digit",
   });
 
+  const detail =
+    event.type === "cookie_set" && event.details.name
+      ? String(event.details.name)
+      : null;
+
   return (
     <div style={styles.item}>
-      <div style={styles.itemLeft}>
-        <span style={styles.badge}>{EVENT_LABELS[event.type]}</span>
-        <span style={styles.domain}>{event.domain}</span>
-      </div>
-      <div style={styles.itemRight}>
-        {event.type === "cookie_set" && event.details.name && (
-          <code style={styles.detail}>{String(event.details.name)}</code>
-        )}
-        <span style={styles.time}>{time}</span>
-      </div>
+      <span style={styles.time}>{time}</span>
+      <span style={styles.type}>{EVENT_LABELS[event.type]}</span>
+      <span style={styles.domain}>{event.domain}</span>
+      {detail && <span style={styles.detail}>{detail}</span>}
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
   list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
+    padding: "4px 0",
+    fontFamily: "ui-monospace, monospace",
+    fontSize: "12px",
   },
   empty: {
     textAlign: "center",
     padding: "48px 20px",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
   },
   emptyTitle: {
     fontSize: "14px",
     fontWeight: 500,
-    color: "hsl(0 0% 9%)",
+    color: "hsl(0 0% 20%)",
   },
   emptyHint: {
     fontSize: "13px",
     marginTop: "4px",
-    color: "hsl(0 0% 45%)",
+    color: "hsl(0 0% 50%)",
   },
   item: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "8px 10px",
-    borderRadius: "6px",
-    background: "hsl(0 0% 98%)",
+    gap: "12px",
+    padding: "6px 8px",
+    color: "hsl(0 0% 35%)",
   },
-  itemLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    minWidth: 0,
-  },
-  itemRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
+  time: {
+    color: "hsl(0 0% 60%)",
     flexShrink: 0,
   },
-  badge: {
-    fontSize: "10px",
-    padding: "2px 6px",
-    borderRadius: "4px",
-    fontWeight: 500,
-    background: "hsl(0 0% 100%)",
-    color: "hsl(0 0% 45%)",
-    border: "1px solid hsl(0 0% 88%)",
+  type: {
+    color: "hsl(0 0% 50%)",
+    width: "52px",
     flexShrink: 0,
   },
   domain: {
-    fontSize: "13px",
     color: "hsl(0 0% 20%)",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   detail: {
-    fontSize: "11px",
-    color: "hsl(0 0% 45%)",
-    fontFamily: "ui-monospace, monospace",
-    maxWidth: "100px",
+    color: "hsl(0 0% 55%)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-  },
-  time: {
-    fontSize: "11px",
-    color: "hsl(0 0% 55%)",
-    fontVariantNumeric: "tabular-nums",
   },
 };
