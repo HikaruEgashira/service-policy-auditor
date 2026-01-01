@@ -1,5 +1,5 @@
-import { detectLoginPage, isLoginPage } from "./login-detector";
-import { findPrivacyPolicy } from "./privacy-finder";
+import { detectLoginPage, isLoginPage } from "@/utils/login-detector";
+import { findPrivacyPolicy } from "@/utils/privacy-finder";
 
 interface PageAnalysis {
   url: string;
@@ -33,14 +33,6 @@ async function sendToBackground(analysis: PageAnalysis) {
   }
 }
 
-function init() {
-  if (document.readyState === "complete") {
-    runAnalysis();
-  } else {
-    window.addEventListener("load", runAnalysis);
-  }
-}
-
 function runAnalysis() {
   const analysis = analyzePage();
 
@@ -50,4 +42,14 @@ function runAnalysis() {
   }
 }
 
-init();
+export default defineContentScript({
+  matches: ["<all_urls>"],
+  runAt: "document_idle",
+  main() {
+    if (document.readyState === "complete") {
+      runAnalysis();
+    } else {
+      window.addEventListener("load", runAnalysis);
+    }
+  },
+});

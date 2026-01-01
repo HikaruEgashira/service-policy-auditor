@@ -1,14 +1,11 @@
 {
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "types": ["chrome"]
-  },
-  "include": ["**/*.ts", "**/*.tsx"]
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
 }
