@@ -17,6 +17,14 @@ async function initStorage(): Promise<StorageData> {
 
 async function saveStorage(data: Partial<StorageData>) {
   await chrome.storage.local.set(data);
+  await updateBadge();
+}
+
+async function updateBadge() {
+  const storage = await initStorage();
+  const count = Object.keys(storage.services).length;
+  await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
+  await chrome.action.setBadgeBackgroundColor({ color: "#666" });
 }
 
 function generateEventId(): string {
@@ -152,5 +160,8 @@ onCookieChange(async (cookie, removed) => {
     },
   });
 });
+
+// Initialize badge on startup
+updateBadge();
 
 console.log("[AI Service Exposure] Background service worker started");
