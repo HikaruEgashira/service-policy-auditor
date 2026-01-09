@@ -35,6 +35,9 @@ importers:
       preact:
         specifier: ^10.28.2
         version: 10.28.2
+      sql.js:
+        specifier: ^1.13.0
+        version: 1.13.0
     devDependencies:
       '@preact/preset-vite':
         specifier: ^2.10.2

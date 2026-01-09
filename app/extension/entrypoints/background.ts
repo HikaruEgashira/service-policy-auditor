@@ -29,6 +29,8 @@ import {
   getServiceCount,
   clearCSPReports,
 } from "@/utils/storage";
+import { DatabaseClient } from "@/utils/db-client";
+import { checkMigrationNeeded, migrateToDatabase } from "@/utils/migration";
 
 const MAX_EVENTS = 1000;
 const DEV_REPORT_ENDPOINT = "http://localhost:3001/api/v1/reports";
@@ -273,20 +275,56 @@ async function handleNetworkRequest(
 }
 
 async function storeCSPReport(report: CSPReport) {
-  return queueStorageOperation(async () => {
-    const storage = await getStorage();
-    const config = storage.cspConfig || DEFAULT_CSP_CONFIG;
-    const maxReports = config.maxStoredReports;
-
-    const cspReports = storage.cspReports || [];
-    cspReports.push(report);
-
-    if (cspReports.length > maxReports) {
-      cspReports.splice(0, cspReports.length - maxReports);
+  try {
+    if (report.type === "csp-violation") {
+      const violation = report as CSPViolation;
+      await DatabaseClient.insertCSPViolation([
+        {
+          timestamp: violation.timestamp,
+          pageUrl: violation.pageUrl,
+          directive: violation.directive,
+          blockedUrl: violation.blockedURL,
+          domain: violation.domain,
+          disposition: violation.disposition,
+          originalPolicy: violation.originalPolicy,
+          sourceFile: violation.sourceFile,
+          lineNumber: violation.lineNumber,
+          columnNumber: violation.columnNumber,
+          statusCode: violation.statusCode,
+        },
+      ]);
+    } else if (report.type === "network-request") {
+      const request = report as NetworkRequest;
+      await DatabaseClient.insertNetworkRequest([
+        {
+          timestamp: request.timestamp,
+          pageUrl: request.pageUrl,
+          url: request.url,
+          method: request.method,
+          initiator: request.initiator,
+          domain: request.domain,
+          resourceType: request.resourceType,
+        },
+      ]);
     }
+  } catch (error) {
+    console.error("[Service Policy Auditor] Error storing to database:", error);
+    // Fallback to chrome.storage
+    await queueStorageOperation(async () => {
+      const storage = await getStorage();
+      const config = storage.cspConfig || DEFAULT_CSP_CONFIG;
+      const maxReports = config.maxStoredReports;
 
-    await setStorage({ cspReports });
-  });
+      const cspReports = storage.cspReports || [];
+      cspReports.push(report);
+
+      if (cspReports.length > maxReports) {
+        cspReports.splice(0, cspReports.length - maxReports);
+      }
+
+      await setStorage({ cspReports });
+    });
+  }
 }
 
 async function flushReportQueue() {
@@ -300,11 +338,92 @@ async function flushReportQueue() {
   }
 }
 
+async function getCSPReports(options?: {
+  type?: "csp-violation" | "network-request";
+}): Promise<CSPReport[]> {
+  try {
+    if (options?.type === "csp-violation") {
+      const violations = await DatabaseClient.getAllViolations();
+      return violations.map((v) => ({
+        type: "csp-violation" as const,
+        timestamp: v.timestamp,
+        pageUrl: v.pageUrl,
+        directive: v.directive,
+        blockedURL: v.blockedUrl,
+        domain: v.domain,
+        disposition: v.disposition,
+        originalPolicy: v.originalPolicy,
+        sourceFile: v.sourceFile,
+        lineNumber: v.lineNumber,
+        columnNumber: v.columnNumber,
+        statusCode: v.statusCode,
+      }));
+    }
+    if (options?.type === "network-request") {
+      const requests = await DatabaseClient.getAllNetworkRequests();
+      return requests.map((r) => ({
+        type: "network-request" as const,
+        timestamp: r.timestamp,
+        pageUrl: r.pageUrl,
+        url: r.url,
+        method: r.method,
+        initiator: r.initiator,
+        domain: r.domain,
+        resourceType: r.resourceType,
+      }));
+    }
+
+    const [violations, requests] = await Promise.all([
+      DatabaseClient.getAllViolations(),
+      DatabaseClient.getAllNetworkRequests(),
+    ]);
+
+    const violationReports: CSPReport[] = violations.map((v) => ({
+      type: "csp-violation" as const,
+      timestamp: v.timestamp,
+      pageUrl: v.pageUrl,
+      directive: v.directive,
+      blockedURL: v.blockedUrl,
+      domain: v.domain,
+      disposition: v.disposition,
+      originalPolicy: v.originalPolicy,
+      sourceFile: v.sourceFile,
+      lineNumber: v.lineNumber,
+      columnNumber: v.columnNumber,
+      statusCode: v.statusCode,
+    }));
+
+    const requestReports: CSPReport[] = requests.map((r) => ({
+      type: "network-request" as const,
+      timestamp: r.timestamp,
+      pageUrl: r.pageUrl,
+      url: r.url,
+      method: r.method,
+      initiator: r.initiator,
+      domain: r.domain,
+      resourceType: r.resourceType,
+    }));
+
+    return [...violationReports, ...requestReports].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  } catch (error) {
+    console.error("[Service Policy Auditor] Error getting CSP reports from database:", error);
+    // Fallback to chrome.storage
+    const storage = await getStorage();
+    const cspReports = storage.cspReports || [];
+
+    if (options?.type) {
+      return cspReports.filter((r) => r.type === options.type);
+    }
+    return cspReports;
+  }
+}
+
 async function generateCSPPolicy(
   options?: Partial<CSPGenerationOptions>
 ): Promise<GeneratedCSPPolicy> {
-  const storage = await getStorage();
-  const cspReports = storage.cspReports || [];
+  const cspReports = await getCSPReports();
   const analyzer = new CSPAnalyzer(cspReports);
   return analyzer.generatePolicy({
     strictMode: options?.strictMode ?? false,
@@ -318,8 +437,7 @@ async function generateCSPPolicy(
 async function generateCSPPolicyByDomain(
   options?: Partial<CSPGenerationOptions>
 ): Promise<GeneratedCSPByDomain> {
-  const storage = await getStorage();
-  const cspReports = storage.cspReports || [];
+  const cspReports = await getCSPReports();
   const analyzer = new CSPAnalyzer(cspReports);
   return analyzer.generatePolicyByDomain({
     strictMode: options?.strictMode ?? false,
@@ -352,29 +470,15 @@ async function setCSPConfig(
 }
 
 async function clearCSPData(): Promise<{ success: boolean }> {
-  await clearCSPReports();
-  reportQueue = [];
-  return { success: true };
-}
-
-async function getCSPReports(options?: {
-  type?: "csp-violation" | "network-request";
-}): Promise<CSPReport[]> {
-  const storage = await getStorage();
-  const cspReports = storage.cspReports || [];
-
-  if (options?.type === "csp-violation") {
-    return cspReports.filter(
-      (r): r is CSPViolation => r.type === "csp-violation"
-    );
+  try {
+    await DatabaseClient.clearAll();
+    await clearCSPReports();
+    reportQueue = [];
+    return { success: true };
+  } catch (error) {
+    console.error("[Service Policy Auditor] Error clearing data:", error);
+    return { success: false };
   }
-  if (options?.type === "network-request") {
-    return cspReports.filter(
-      (r): r is NetworkRequest => r.type === "network-request"
-    );
-  }
-
-  return cspReports;
 }
 
 function setupMessageHandlers() {
@@ -436,6 +540,21 @@ function setupMessageHandlers() {
 }
 
 export default defineBackground(() => {
+  // Initialize database on startup and run migration if needed
+  DatabaseClient.init()
+    .then(async () => {
+      const needsMigration = await checkMigrationNeeded();
+      if (needsMigration) {
+        const result = await migrateToDatabase();
+        if (result.success) {
+          console.log(`[Service Policy Auditor] Migration completed: ${result.migratedCount} reports migrated`);
+        }
+      }
+    })
+    .catch((error) => {
+      console.error("[Service Policy Auditor] Failed to initialize database:", error);
+    });
+
   // Initialize CSP reporter on startup
   getCSPConfig().then((config) => {
     const endpoint =

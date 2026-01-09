@@ -9,7 +9,8 @@
   "dependencies": {
     "@service-policy-auditor/detectors": "workspace:*",
     "@service-policy-auditor/csp": "workspace:*",
-    "preact": "^10.28.2"
+    "preact": "^10.28.2",
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.2",
