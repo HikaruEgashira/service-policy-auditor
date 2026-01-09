@@ -17,7 +17,7 @@ import type {
 } from "@service-policy-auditor/core";
 import { DEFAULT_CSP_CONFIG } from "@service-policy-auditor/core";
 import { startCookieMonitor, onCookieChange } from "@/utils/cookie-monitor";
-import { CSPAnalyzer } from "@/utils/csp-analyzer";
+import { CSPAnalyzer, type GeneratedCSPByDomain } from "@/utils/csp-analyzer";
 import { CSPReporter } from "@/utils/csp-reporter";
 
 const MAX_EVENTS = 1000;
@@ -314,6 +314,21 @@ async function generateCSPPolicy(
   });
 }
 
+async function generateCSPPolicyByDomain(
+  options?: Partial<CSPGenerationOptions>
+): Promise<GeneratedCSPByDomain> {
+  const storage = await initStorage();
+  const cspReports = storage.cspReports || [];
+  const analyzer = new CSPAnalyzer(cspReports);
+  return analyzer.generatePolicyByDomain({
+    strictMode: options?.strictMode ?? false,
+    includeReportUri: options?.includeReportUri ?? false,
+    reportUri: options?.reportUri ?? "",
+    defaultSrc: options?.defaultSrc ?? "'self'",
+    includeNonce: options?.includeNonce ?? false,
+  });
+}
+
 async function getCSPConfig(): Promise<CSPConfig> {
   const storage = await initStorage();
   return storage.cspConfig || DEFAULT_CSP_CONFIG;
@@ -431,6 +446,17 @@ export default defineBackground(() => {
         .then(sendResponse)
         .catch((error) => {
           console.error("[Service Policy Auditor] Error generating CSP:", error);
+          sendResponse(null);
+        });
+      return true;
+    }
+
+    // Generate CSP Policy by Domain
+    if (message.type === "GENERATE_CSP_BY_DOMAIN") {
+      generateCSPPolicyByDomain(message.data?.options)
+        .then(sendResponse)
+        .catch((error) => {
+          console.error("[Service Policy Auditor] Error generating CSP by domain:", error);
           sendResponse(null);
         });
       return true;
