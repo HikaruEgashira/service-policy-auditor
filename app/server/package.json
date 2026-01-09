@@ -1,0 +1,19 @@
+{
+  "name": "@ai-service-exposure/server",
+  "version": "0.0.1",
+  "description": "Local development server for AI Service Exposure reports",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@ai-service-exposure/core": "workspace:*",
+    "sql.js": "^1.11.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
