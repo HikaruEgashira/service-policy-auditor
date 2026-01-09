@@ -58,7 +58,7 @@ declare global {
   export type { CookieChangeCallback } from '/Users/hikae/ghq/github.com/HikaruEgashira/service-policy-auditor/app/extension/utils/cookie-monitor'
   import('/Users/hikae/ghq/github.com/HikaruEgashira/service-policy-auditor/app/extension/utils/cookie-monitor')
   // @ts-ignore
-  export type { CSPAnalyzer } from '/Users/hikae/ghq/github.com/HikaruEgashira/service-policy-auditor/app/extension/utils/csp-analyzer'
+  export type { CSPAnalyzer, DomainCSPPolicy, GeneratedCSPByDomain } from '/Users/hikae/ghq/github.com/HikaruEgashira/service-policy-auditor/app/extension/utils/csp-analyzer'
   import('/Users/hikae/ghq/github.com/HikaruEgashira/service-policy-auditor/app/extension/utils/csp-analyzer')
   // @ts-ignore
   export type { CSPReporter, ReportPayload } from '/Users/hikae/ghq/github.com/HikaruEgashira/service-policy-auditor/app/extension/utils/csp-reporter'

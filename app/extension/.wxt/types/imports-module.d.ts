@@ -18,7 +18,7 @@ declare module '#imports' {
   export { InvalidMatchPattern, MatchPattern } from 'wxt/utils/match-patterns';
   export { fakeBrowser } from 'wxt/testing';
   export { startCookieMonitor, onCookieChange, CookieChangeCallback } from '../utils/cookie-monitor';
-  export { CSPAnalyzer, CSPAnalyzer } from '../utils/csp-analyzer';
+  export { CSPAnalyzer, CSPAnalyzer, DomainCSPPolicy, GeneratedCSPByDomain } from '../utils/csp-analyzer';
   export { CSPReporter, CSPReporter, ReportPayload } from '../utils/csp-reporter';
   export { detectLoginPage, isLoginPage, LoginDetectionResult } from '../utils/login-detector';
   export { findPrivacyPolicy, PrivacyPolicyResult } from '../utils/privacy-finder';

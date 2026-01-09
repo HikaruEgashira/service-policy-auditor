@@ -17,11 +17,73 @@ import {
   REQUIRED_DIRECTIVES,
 } from "@service-policy-auditor/core";
 
+export interface DomainCSPPolicy {
+  domain: string;
+  policy: GeneratedCSPPolicy;
+  reportCount: number;
+}
+
+export interface GeneratedCSPByDomain {
+  policies: DomainCSPPolicy[];
+  totalDomains: number;
+}
+
 export class CSPAnalyzer {
   private reports: CSPReport[];
 
   constructor(reports: CSPReport[] = []) {
     this.reports = reports;
+  }
+
+  /**
+   * Generate CSP policies grouped by page origin (source domain)
+   */
+  generatePolicyByDomain(options: CSPGenerationOptions): GeneratedCSPByDomain {
+    const reportsByDomain = this.groupReportsByPageOrigin();
+    const policies: DomainCSPPolicy[] = [];
+
+    for (const [domain, domainReports] of Object.entries(reportsByDomain)) {
+      const analyzer = new CSPAnalyzer(domainReports);
+      const policy = analyzer.generatePolicy(options);
+      policies.push({
+        domain,
+        policy,
+        reportCount: domainReports.length,
+      });
+    }
+
+    // Sort by report count descending
+    policies.sort((a, b) => b.reportCount - a.reportCount);
+
+    return {
+      policies,
+      totalDomains: policies.length,
+    };
+  }
+
+  private groupReportsByPageOrigin(): Record<string, CSPReport[]> {
+    const grouped: Record<string, CSPReport[]> = {};
+
+    for (const report of this.reports) {
+      const pageOrigin = this.extractOrigin(report.pageUrl);
+      if (!pageOrigin) continue;
+
+      if (!grouped[pageOrigin]) {
+        grouped[pageOrigin] = [];
+      }
+      grouped[pageOrigin].push(report);
+    }
+
+    return grouped;
+  }
+
+  private extractOrigin(url: string): string | null {
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname;
+    } catch {
+      return null;
+    }
   }
 
   generatePolicy(options: CSPGenerationOptions): GeneratedCSPPolicy {
