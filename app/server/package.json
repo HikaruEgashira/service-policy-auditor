@@ -1,15 +1,16 @@
 {
-  "name": "@service-policy-controller/debugger",
+  "name": "@service-policy-controller/server",
   "version": "0.0.1",
+  "description": "Local development server for Service Policy Controller reports",
   "type": "module",
+  "main": "src/index.ts",
   "scripts": {
     "start": "tsx src/index.ts",
-    "dump": "tsx src/index.ts dump",
-    "watch": "tsx src/index.ts watch"
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "@service-policy-controller/core": "workspace:*",
-    "puppeteer": "^23.0.0"
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
     "tsx": "^4.7.0",

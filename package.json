@@ -1,10 +1,12 @@
 {
-  "name": "ai-service-exposure",
+  "name": "service-policy-controller",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "pnpm -C app/extension dev",
-    "build": "pnpm -C app/extension build"
+    "build": "pnpm -C app/extension build",
+    "server": "pnpm -C app/server start",
+    "server:dev": "pnpm -C app/server dev"
   }
 }
