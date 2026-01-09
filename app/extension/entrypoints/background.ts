@@ -14,8 +14,8 @@ import type {
   NetworkRequestDetails,
   GeneratedCSPPolicy,
   CSPGenerationOptions,
-} from "@service-policy-controller/core";
-import { DEFAULT_CSP_CONFIG } from "@service-policy-controller/core";
+} from "@service-policy-auditor/core";
+import { DEFAULT_CSP_CONFIG } from "@service-policy-auditor/core";
 import { startCookieMonitor, onCookieChange } from "@/utils/cookie-monitor";
 import { CSPAnalyzer } from "@/utils/csp-analyzer";
 import { CSPReporter } from "@/utils/csp-reporter";
@@ -60,7 +60,7 @@ async function updateBadge() {
     await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
     await chrome.action.setBadgeBackgroundColor({ color: "#666" });
   } catch (error) {
-    console.error("[Service Policy Controller] Failed to update badge:", error);
+    console.error("[Service Policy Auditor] Failed to update badge:", error);
   }
 }
 
@@ -375,7 +375,7 @@ export default defineBackground(() => {
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === "flushCSPReports") {
       flushReportQueue().catch((error) => {
-        console.error("[Service Policy Controller] Error flushing CSP reports:", error);
+        console.error("[Service Policy Auditor] Error flushing CSP reports:", error);
       });
     }
   });
@@ -385,7 +385,7 @@ export default defineBackground(() => {
     if (message.type === "PAGE_ANALYZED") {
       handlePageAnalysis(message.payload).catch((error) => {
         console.error(
-          "[Service Policy Controller] Error handling page analysis:",
+          "[Service Policy Auditor] Error handling page analysis:",
           error
         );
       });
@@ -397,7 +397,7 @@ export default defineBackground(() => {
       handleCSPViolation(message.data, sender)
         .then(sendResponse)
         .catch((error) => {
-          console.error("[Service Policy Controller] Error handling CSP violation:", error);
+          console.error("[Service Policy Auditor] Error handling CSP violation:", error);
           sendResponse({ success: false, reason: String(error) });
         });
       return true;
@@ -408,7 +408,7 @@ export default defineBackground(() => {
       handleNetworkRequest(message.data, sender)
         .then(sendResponse)
         .catch((error) => {
-          console.error("[Service Policy Controller] Error handling network request:", error);
+          console.error("[Service Policy Auditor] Error handling network request:", error);
           sendResponse({ success: false, reason: String(error) });
         });
       return true;
@@ -419,7 +419,7 @@ export default defineBackground(() => {
       getCSPReports(message.data)
         .then(sendResponse)
         .catch((error) => {
-          console.error("[Service Policy Controller] Error getting CSP reports:", error);
+          console.error("[Service Policy Auditor] Error getting CSP reports:", error);
           sendResponse([]);
         });
       return true;
@@ -430,7 +430,7 @@ export default defineBackground(() => {
       generateCSPPolicy(message.data?.options)
         .then(sendResponse)
         .catch((error) => {
-          console.error("[Service Policy Controller] Error generating CSP:", error);
+          console.error("[Service Policy Auditor] Error generating CSP:", error);
           sendResponse(null);
         });
       return true;
@@ -441,7 +441,7 @@ export default defineBackground(() => {
       getCSPConfig()
         .then(sendResponse)
         .catch((error) => {
-          console.error("[Service Policy Controller] Error getting CSP config:", error);
+          console.error("[Service Policy Auditor] Error getting CSP config:", error);
           sendResponse(DEFAULT_CSP_CONFIG);
         });
       return true;
@@ -452,7 +452,7 @@ export default defineBackground(() => {
       setCSPConfig(message.data)
         .then(sendResponse)
         .catch((error) => {
-          console.error("[Service Policy Controller] Error setting CSP config:", error);
+          console.error("[Service Policy Auditor] Error setting CSP config:", error);
           sendResponse({ success: false });
         });
       return true;
@@ -463,7 +463,7 @@ export default defineBackground(() => {
       clearCSPData()
         .then(sendResponse)
         .catch((error) => {
-          console.error("[Service Policy Controller] Error clearing CSP data:", error);
+          console.error("[Service Policy Auditor] Error clearing CSP data:", error);
           sendResponse({ success: false });
         });
       return true;
@@ -480,7 +480,7 @@ export default defineBackground(() => {
     const domain = cookie.domain.replace(/^\./, "");
 
     addCookieToService(domain, cookie).catch((error) => {
-      console.error("[Service Policy Controller] Error adding cookie:", error);
+      console.error("[Service Policy Auditor] Error adding cookie:", error);
     });
 
     addEvent({
@@ -492,11 +492,11 @@ export default defineBackground(() => {
         isSession: cookie.isSession,
       },
     }).catch((error) => {
-      console.error("[Service Policy Controller] Error adding event:", error);
+      console.error("[Service Policy Auditor] Error adding event:", error);
     });
   });
 
   updateBadge();
 
-  console.log("[Service Policy Controller] Background service worker started (with CSP Auditor)");
+  console.log("[Service Policy Auditor] Background service worker started");
 });

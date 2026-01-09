@@ -1,5 +1,5 @@
 {
-  "name": "service-policy-controller",
+  "name": "service-policy-auditor",
   "version": "0.0.1",
   "private": true,
   "type": "module",

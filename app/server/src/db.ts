@@ -1,12 +1,12 @@
 /**
- * SQLite Database Module for Service Policy Controller (using sql.js)
+ * SQLite Database Module for Service Policy Auditor (using sql.js)
  */
 
 import initSqlJs, { Database } from 'sql.js'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { CSPViolation, NetworkRequest } from '@service-policy-controller/core'
+import type { CSPViolation, NetworkRequest } from '@service-policy-auditor/core'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, '../data')

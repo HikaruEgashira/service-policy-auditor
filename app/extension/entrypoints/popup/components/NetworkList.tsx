@@ -1,4 +1,4 @@
-import type { NetworkRequest } from "@service-policy-controller/core";
+import type { NetworkRequest } from "@service-policy-auditor/core";
 import { styles } from "../styles";
 
 interface Props {

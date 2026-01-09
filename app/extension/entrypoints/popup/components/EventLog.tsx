@@ -1,4 +1,4 @@
-import type { EventLog } from "@service-policy-controller/core";
+import type { EventLog } from "@service-policy-auditor/core";
 import { styles } from "../styles";
 
 interface Props {

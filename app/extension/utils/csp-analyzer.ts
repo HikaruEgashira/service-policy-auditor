@@ -11,11 +11,11 @@ import type {
   CSPStatistics,
   SecurityRecommendation,
   CSPGenerationOptions,
-} from "@service-policy-controller/core";
+} from "@service-policy-auditor/core";
 import {
   INITIATOR_TO_DIRECTIVE,
   REQUIRED_DIRECTIVES,
-} from "@service-policy-controller/core";
+} from "@service-policy-auditor/core";
 
 export class CSPAnalyzer {
   private reports: CSPReport[];

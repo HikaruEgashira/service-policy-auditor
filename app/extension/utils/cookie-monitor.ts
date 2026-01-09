@@ -1,4 +1,4 @@
-import { isSessionCookie, type CookieInfo } from "@service-policy-controller/core";
+import { isSessionCookie, type CookieInfo } from "@service-policy-auditor/core";
 
 export type CookieChangeCallback = (cookie: CookieInfo, removed: boolean) => void;
 

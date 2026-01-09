@@ -2,7 +2,7 @@ import {
   isPrivacyUrl,
   isPrivacyText,
   FOOTER_SELECTORS,
-} from "@service-policy-controller/core";
+} from "@service-policy-auditor/core";
 
 export interface PrivacyPolicyResult {
   found: boolean;

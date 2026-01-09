@@ -1,5 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
-import type { CSPConfig } from "@service-policy-controller/core";
+import type { CSPConfig } from "@service-policy-auditor/core";
 import { styles } from "../styles";
 
 export function Settings() {
