@@ -12,8 +12,24 @@ import { ViolationList } from "./components/ViolationList";
 import { NetworkList } from "./components/NetworkList";
 import { PolicyGenerator } from "./components/PolicyGenerator";
 import { Settings } from "./components/Settings";
+import { styles } from "./styles";
 
-type Tab = "services" | "events" | "violations" | "network" | "policy" | "settings";
+type Tab =
+  | "services"
+  | "events"
+  | "violations"
+  | "network"
+  | "policy"
+  | "settings";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "services", label: "Services" },
+  { key: "events", label: "Events" },
+  { key: "violations", label: "Violations" },
+  { key: "network", label: "Network" },
+  { key: "policy", label: "Policy" },
+  { key: "settings", label: "Settings" },
+];
 
 export function App() {
   const [data, setData] = useState<StorageData>({ services: {}, events: [] });
@@ -25,7 +41,9 @@ export function App() {
   useEffect(() => {
     loadData();
     loadCSPData();
-    const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+    const listener = (changes: {
+      [key: string]: chrome.storage.StorageChange;
+    }) => {
       if (changes.services || changes.events) {
         loadData();
       }
@@ -65,12 +83,25 @@ export function App() {
     }
   }
 
+  async function handleClearData() {
+    if (!confirm("Clear all collected data?")) return;
+    try {
+      await chrome.storage.local.remove(["services", "events"]);
+      await chrome.runtime.sendMessage({ type: "CLEAR_CSP_DATA" });
+      setData({ services: {}, events: [] });
+      setViolations([]);
+      setNetworkRequests([]);
+    } catch (err) {
+      console.error("Failed to clear data:", err);
+    }
+  }
+
   const services = Object.values(data.services) as DetectedService[];
   const events = data.events as EventLog[];
 
   function renderContent() {
     if (loading) {
-      return <p style={styles.loading}>Loading...</p>;
+      return <p style={styles.emptyText}>Loading...</p>;
     }
     switch (tab) {
       case "services":
@@ -92,117 +123,33 @@ export function App() {
 
   return (
     <div style={styles.container}>
-      <nav style={styles.nav}>
+      <header style={styles.header}>
+        <h1 style={styles.title}>AI Service Exposure</h1>
         <button
-          style={{
-            ...styles.tab,
-            ...(tab === "services" ? styles.tabActive : {}),
-          }}
-          onClick={() => setTab("services")}
+          onClick={handleClearData}
+          style={styles.clearBtn}
+          title="Clear all data"
         >
-          Services
-          {services.length > 0 && (
-            <span style={styles.badge}>{services.length}</span>
-          )}
+          Clear
         </button>
-        <button
-          style={{
-            ...styles.tab,
-            ...(tab === "events" ? styles.tabActive : {}),
-          }}
-          onClick={() => setTab("events")}
-        >
-          Events
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            ...(tab === "violations" ? styles.tabActive : {}),
-          }}
-          onClick={() => setTab("violations")}
-        >
-          CSP
-          {violations.length > 0 && (
-            <span style={styles.badge}>{violations.length}</span>
-          )}
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            ...(tab === "network" ? styles.tabActive : {}),
-          }}
-          onClick={() => setTab("network")}
-        >
-          Network
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            ...(tab === "policy" ? styles.tabActive : {}),
-          }}
-          onClick={() => setTab("policy")}
-        >
-          Policy
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            ...(tab === "settings" ? styles.tabActive : {}),
-          }}
-          onClick={() => setTab("settings")}
-        >
-          Settings
-        </button>
+      </header>
+
+      <nav style={styles.tabNav}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              ...styles.tabBtn,
+              ...(tab === t.key ? styles.tabBtnActive : styles.tabBtnInactive),
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
       </nav>
 
       <main style={styles.content}>{renderContent()}</main>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-  },
-  nav: {
-    display: "flex",
-    padding: "8px 12px",
-    gap: "4px",
-    borderBottom: "1px solid hsl(0 0% 92%)",
-    flexWrap: "wrap",
-  },
-  tab: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    padding: "6px 10px",
-    border: "none",
-    borderRadius: "6px",
-    background: "transparent",
-    cursor: "pointer",
-    fontSize: "12px",
-    fontWeight: 500,
-    color: "hsl(0 0% 45%)",
-    transition: "all 0.15s",
-  },
-  tabActive: {
-    color: "hsl(0 0% 10%)",
-    background: "hsl(0 0% 95%)",
-  },
-  badge: {
-    fontSize: "10px",
-    color: "hsl(0 0% 50%)",
-  },
-  content: {
-    flex: 1,
-    overflow: "auto",
-  },
-  loading: {
-    textAlign: "center",
-    padding: "60px 20px",
-    color: "hsl(0 0% 50%)",
-    fontSize: "13px",
-  },
-};

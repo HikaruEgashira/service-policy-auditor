@@ -1,4 +1,5 @@
 import type { NetworkRequest } from "@ai-service-exposure/core";
+import { styles } from "../styles";
 
 interface Props {
   requests: NetworkRequest[];
@@ -6,88 +7,51 @@ interface Props {
 
 export function NetworkList({ requests }: Props) {
   if (requests.length === 0) {
-    return <p style={styles.empty}>No network requests captured</p>;
+    return (
+      <div style={styles.section}>
+        <p style={styles.emptyText}>No network requests detected yet</p>
+      </div>
+    );
   }
 
   return (
-    <div style={styles.container}>
-      {requests.map((r, i) => (
-        <div key={i} style={styles.item}>
-          <div style={styles.header}>
-            <span style={styles.method}>{r.method}</span>
-            <span style={styles.initiator}>{r.initiator}</span>
-          </div>
-          <div style={styles.url}>{truncateUrl(r.url)}</div>
-          <div style={styles.meta}>
-            <span>{r.domain}</span>
-            <span>{formatTime(r.timestamp)}</span>
-          </div>
-        </div>
-      ))}
+    <div style={styles.section}>
+      <h3 style={styles.sectionTitle}>Network Requests ({requests.length})</h3>
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={styles.tableHeader}>Time</th>
+            <th style={styles.tableHeader}>Type</th>
+            <th style={styles.tableHeader}>Method</th>
+            <th style={styles.tableHeader}>Domain</th>
+          </tr>
+        </thead>
+        <tbody>
+          {requests.slice(0, 50).map((r, i) => (
+            <tr key={i} style={styles.tableRow}>
+              <td style={styles.tableCell}>{formatTime(r.timestamp)}</td>
+              <td style={styles.tableCell}>
+                <span style={styles.badge}>{r.initiator}</span>
+              </td>
+              <td style={styles.tableCell}>
+                <span style={styles.code}>{r.method}</span>
+              </td>
+              <td style={styles.tableCell}>{r.domain}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {requests.length > 50 && (
+        <p style={{ color: "hsl(0 0% 60%)", fontSize: "11px", marginTop: "8px" }}>
+          Showing 50 of {requests.length} requests
+        </p>
+      )}
     </div>
   );
 }
 
-function truncateUrl(url: string, maxLength = 50): string {
-  if (url.length <= maxLength) return url;
-  return url.slice(0, maxLength - 3) + "...";
+function formatTime(timestamp: string | number): string {
+  const ms =
+    typeof timestamp === "string" ? new Date(timestamp).getTime() : timestamp;
+  return new Date(ms).toLocaleTimeString();
 }
-
-function formatTime(timestamp: string): string {
-  try {
-    return new Date(timestamp).toLocaleTimeString();
-  } catch {
-    return timestamp;
-  }
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: "8px",
-    maxHeight: "300px",
-    overflowY: "auto",
-    overflowX: "hidden",
-  },
-  empty: {
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "hsl(0 0% 50%)",
-    fontSize: "13px",
-  },
-  item: {
-    padding: "10px 12px",
-    borderBottom: "1px solid hsl(0 0% 92%)",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "4px",
-  },
-  method: {
-    fontSize: "11px",
-    fontWeight: 600,
-    color: "hsl(210 70% 45%)",
-    fontFamily: "monospace",
-  },
-  initiator: {
-    fontSize: "10px",
-    padding: "2px 6px",
-    borderRadius: "4px",
-    background: "hsl(0 0% 95%)",
-    color: "hsl(0 0% 45%)",
-  },
-  url: {
-    fontSize: "12px",
-    color: "hsl(0 0% 30%)",
-    fontFamily: "monospace",
-    wordBreak: "break-all",
-    marginBottom: "4px",
-  },
-  meta: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: "11px",
-    color: "hsl(0 0% 50%)",
-  },
-};

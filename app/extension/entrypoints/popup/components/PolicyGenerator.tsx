@@ -1,185 +1,133 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState } from "preact/hooks";
 import type { GeneratedCSPPolicy } from "@ai-service-exposure/core";
+import { styles } from "../styles";
 
 export function PolicyGenerator() {
   const [policy, setPolicy] = useState<GeneratedCSPPolicy | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [strictMode, setStrictMode] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    generatePolicy();
-  }, [strictMode]);
-
-  async function generatePolicy() {
+  async function handleGenerate() {
     setLoading(true);
     try {
       const result = await chrome.runtime.sendMessage({
         type: "GENERATE_CSP",
-        data: { options: { strictMode } },
+        data: { options: { strictMode: false, includeReportUri: true } },
       });
       setPolicy(result);
-    } catch (error) {
-      console.error("Failed to generate CSP:", error);
+    } catch (err) {
+      console.error("Failed to generate policy:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
-  async function copyPolicy() {
+  async function handleCopy() {
     if (!policy) return;
     try {
       await navigator.clipboard.writeText(policy.policyString);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy:", error);
+      alert("Copied to clipboard!");
+    } catch (err) {
+      console.error("Failed to copy:", err);
     }
   }
 
-  if (loading) {
-    return <p style={styles.loading}>Generating policy...</p>;
-  }
-
   if (!policy) {
-    return <p style={styles.empty}>No data to generate policy</p>;
+    return (
+      <div style={styles.section}>
+        <p style={{ ...styles.emptyText, marginBottom: "12px" }}>
+          Generate a CSP policy from collected violations and network requests
+        </p>
+        <button
+          onClick={handleGenerate}
+          disabled={loading}
+          style={{
+            ...styles.button,
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.6 : 1,
+          }}
+        >
+          {loading ? "Generating..." : "Generate CSP Policy"}
+        </button>
+      </div>
+    );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <label style={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={strictMode}
-            onChange={(e) => setStrictMode((e.target as HTMLInputElement).checked)}
-          />
-          <span>Strict Mode</span>
-        </label>
-        <button style={styles.copyBtn} onClick={copyPolicy}>
-          {copied ? "Copied!" : "Copy"}
-        </button>
+    <div style={styles.section}>
+      <h3 style={styles.sectionTitle}>Generated Policy</h3>
+
+      <div
+        style={{
+          backgroundColor: "hsl(0 0% 95%)",
+          padding: "12px",
+          borderRadius: "3px",
+          marginBottom: "12px",
+          maxHeight: "200px",
+          overflow: "auto",
+        }}
+      >
+        <pre
+          style={{
+            margin: 0,
+            fontSize: "11px",
+            fontFamily: "'Menlo', monospace",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-all" as const,
+            color: "hsl(0 0% 20%)",
+            lineHeight: 1.4,
+          }}
+        >
+          {policy.policyString}
+        </pre>
       </div>
 
-      <div style={styles.stats}>
-        <span>Violations: {policy.statistics.cspViolations}</span>
-        <span>Requests: {policy.statistics.networkRequests}</span>
-        <span>Domains: {policy.statistics.uniqueDomains.length}</span>
-      </div>
+      <button
+        onClick={handleCopy}
+        style={{
+          ...styles.button,
+          padding: "6px 12px",
+          fontSize: "12px",
+          marginRight: "8px",
+        }}
+      >
+        Copy to Clipboard
+      </button>
 
-      <div style={styles.policyBox}>
-        <code style={styles.policy}>{policy.policyString}</code>
-      </div>
+      <button onClick={() => setPolicy(null)} style={styles.buttonSecondary}>
+        Clear
+      </button>
 
       {policy.recommendations.length > 0 && (
-        <div style={styles.recommendations}>
-          <h4 style={styles.recTitle}>Recommendations</h4>
-          {policy.recommendations.slice(0, 3).map((rec, i) => (
-            <div key={i} style={styles.rec}>
-              <span style={getSeverityStyle(rec.severity)}>{rec.severity}</span>
-              <span style={styles.recMsg}>{rec.message}</span>
-            </div>
-          ))}
+        <div style={{ marginTop: "12px" }}>
+          <h4 style={{ ...styles.sectionTitle, marginTop: "12px" }}>
+            Recommendations ({policy.recommendations.length})
+          </h4>
+          <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "12px" }}>
+            {policy.recommendations.slice(0, 10).map((rec, i) => (
+              <li
+                key={i}
+                style={{
+                  marginBottom: "6px",
+                  color:
+                    rec.severity === "critical"
+                      ? "hsl(0 70% 50%)"
+                      : "hsl(0 0% 40%)",
+                }}
+              >
+                <strong
+                  style={{ textTransform: "uppercase", fontSize: "10px" }}
+                >
+                  {rec.severity}
+                </strong>{" "}
+                <span style={{ fontFamily: "'Menlo', monospace" }}>
+                  {rec.directive}
+                </span>
+                : {rec.message}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
   );
 }
-
-function getSeverityStyle(severity: string): React.CSSProperties {
-  const colors: Record<string, string> = {
-    critical: "hsl(0 70% 50%)",
-    high: "hsl(30 70% 50%)",
-    medium: "hsl(45 70% 45%)",
-    low: "hsl(210 50% 50%)",
-  };
-  return {
-    ...styles.severity,
-    color: colors[severity] || colors.medium,
-  };
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: "12px",
-  },
-  loading: {
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "hsl(0 0% 50%)",
-    fontSize: "13px",
-  },
-  empty: {
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "hsl(0 0% 50%)",
-    fontSize: "13px",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "12px",
-  },
-  toggle: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "12px",
-    cursor: "pointer",
-  },
-  copyBtn: {
-    padding: "6px 12px",
-    fontSize: "11px",
-    border: "1px solid hsl(0 0% 85%)",
-    borderRadius: "4px",
-    background: "white",
-    cursor: "pointer",
-  },
-  stats: {
-    display: "flex",
-    gap: "12px",
-    fontSize: "11px",
-    color: "hsl(0 0% 50%)",
-    marginBottom: "12px",
-  },
-  policyBox: {
-    background: "hsl(0 0% 97%)",
-    borderRadius: "6px",
-    padding: "12px",
-    marginBottom: "12px",
-    maxHeight: "120px",
-    overflow: "auto",
-  },
-  policy: {
-    fontSize: "11px",
-    fontFamily: "monospace",
-    wordBreak: "break-all",
-    lineHeight: 1.5,
-  },
-  recommendations: {
-    borderTop: "1px solid hsl(0 0% 92%)",
-    paddingTop: "12px",
-  },
-  recTitle: {
-    fontSize: "12px",
-    fontWeight: 600,
-    margin: "0 0 8px 0",
-    color: "hsl(0 0% 30%)",
-  },
-  rec: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "flex-start",
-    fontSize: "11px",
-    marginBottom: "6px",
-  },
-  severity: {
-    fontSize: "10px",
-    fontWeight: 600,
-    textTransform: "uppercase",
-  },
-  recMsg: {
-    color: "hsl(0 0% 40%)",
-    flex: 1,
-  },
-};

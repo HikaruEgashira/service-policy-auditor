@@ -1,5 +1,6 @@
 import { useState, useEffect } from "preact/hooks";
 import type { CSPConfig } from "@ai-service-exposure/core";
+import { styles } from "../styles";
 
 export function Settings() {
   const [config, setConfig] = useState<CSPConfig | null>(null);
@@ -53,19 +54,26 @@ export function Settings() {
   }
 
   if (!config) {
-    return <p style={styles.loading}>Loading...</p>;
+    return (
+      <div style={styles.section}>
+        <p style={styles.emptyText}>Loading...</p>
+      </div>
+    );
   }
 
   return (
-    <div style={styles.container}>
-      <h3 style={styles.title}>CSP Auditor Settings</h3>
+    <div style={styles.section}>
+      <h3 style={styles.sectionTitle}>CSP Auditor Settings</h3>
 
       <label style={styles.checkbox}>
         <input
           type="checkbox"
           checked={config.enabled}
           onChange={(e) =>
-            setConfig({ ...config, enabled: (e.target as HTMLInputElement).checked })
+            setConfig({
+              ...config,
+              enabled: (e.target as HTMLInputElement).checked,
+            })
           }
         />
         <span>Enable CSP Auditing</span>
@@ -99,7 +107,7 @@ export function Settings() {
         <span>Collect Network Requests</span>
       </label>
 
-      <div style={styles.field}>
+      <div style={{ marginBottom: "16px" }}>
         <label style={styles.label}>Report Endpoint (optional)</label>
         <input
           type="url"
@@ -110,91 +118,43 @@ export function Settings() {
         />
       </div>
 
-      <div style={styles.actions}>
-        <button style={styles.saveBtn} onClick={handleSave} disabled={saving}>
+      <div style={{ display: "flex", gap: "8px" }}>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            ...styles.button,
+            flex: 1,
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
           {saving ? "Saving..." : "Save Settings"}
         </button>
-        <button style={styles.clearBtn} onClick={handleClearData}>
+        <button
+          onClick={handleClearData}
+          style={{
+            ...styles.buttonSecondary,
+            color: "hsl(0 70% 50%)",
+            borderColor: "hsl(0 70% 50%)",
+          }}
+        >
           Clear Data
         </button>
       </div>
 
-      {message && <p style={styles.message}>{message}</p>}
+      {message && (
+        <p
+          style={{
+            marginTop: "12px",
+            fontSize: "12px",
+            color: "hsl(120 50% 40%)",
+            textAlign: "center",
+          }}
+        >
+          {message}
+        </p>
+      )}
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: "16px",
-  },
-  loading: {
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "hsl(0 0% 50%)",
-    fontSize: "13px",
-  },
-  title: {
-    fontSize: "14px",
-    fontWeight: 600,
-    margin: "0 0 16px 0",
-    color: "hsl(0 0% 20%)",
-  },
-  checkbox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    fontSize: "13px",
-    marginBottom: "12px",
-    cursor: "pointer",
-  },
-  field: {
-    marginBottom: "16px",
-  },
-  label: {
-    display: "block",
-    fontSize: "12px",
-    fontWeight: 500,
-    marginBottom: "4px",
-    color: "hsl(0 0% 30%)",
-  },
-  input: {
-    width: "100%",
-    padding: "8px",
-    fontSize: "12px",
-    border: "1px solid hsl(0 0% 85%)",
-    borderRadius: "4px",
-    boxSizing: "border-box",
-  },
-  actions: {
-    display: "flex",
-    gap: "8px",
-    marginTop: "16px",
-  },
-  saveBtn: {
-    flex: 1,
-    padding: "8px 16px",
-    fontSize: "12px",
-    fontWeight: 500,
-    border: "none",
-    borderRadius: "4px",
-    background: "hsl(210 70% 50%)",
-    color: "white",
-    cursor: "pointer",
-  },
-  clearBtn: {
-    padding: "8px 16px",
-    fontSize: "12px",
-    border: "1px solid hsl(0 70% 50%)",
-    borderRadius: "4px",
-    background: "white",
-    color: "hsl(0 70% 50%)",
-    cursor: "pointer",
-  },
-  message: {
-    marginTop: "12px",
-    fontSize: "12px",
-    color: "hsl(120 50% 40%)",
-    textAlign: "center",
-  },
-};
