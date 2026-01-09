@@ -4,16 +4,8 @@ Browserを通してアクセスするWebサービスの利用状況を可視化�
 
 ## Features
 
-### Local First
-
-すべてのデータ処理はブラウザ内で完結します。
-
-### Privacy Policy Detection
-
-プライバシーポリシーURLを自動検出する独自アルゴリズムを提供します。
-
-### その他の機能
-
+- Local First: すべてのデータ処理はブラウザ内で完結します。
+- Privacy Policy Detection: プライバシーポリシーを自動検出する独自アルゴリズムを提供します。
 - Service Detection: ドメイン・Cookie・ネットワークリクエストからサービスを特定
 - CSP Auditor: Content Security Policy違反の検出・レポート
 - Policy Generator: 検出された通信先から推奨CSPを生成
