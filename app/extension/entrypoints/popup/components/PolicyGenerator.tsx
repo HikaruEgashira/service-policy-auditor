@@ -88,7 +88,7 @@ export function PolicyGenerator() {
         }}
       >
         <h3 style={{ ...styles.sectionTitle, margin: 0 }}>
-          CSP by Domain ({result.totalDomains})
+          CSP ({result.totalDomains})
         </h3>
         <button onClick={() => setResult(null)} style={styles.buttonSecondary}>
           Clear
