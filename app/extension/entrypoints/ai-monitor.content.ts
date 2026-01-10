@@ -5,6 +5,21 @@
 
 import type { CapturedAIPrompt } from "@service-policy-auditor/detectors";
 
+function isExtensionContextValid(): boolean {
+  try {
+    return chrome.runtime?.id != null;
+  } catch {
+    return false;
+  }
+}
+
+function safeSendMessage(message: unknown): void {
+  if (!isExtensionContextValid()) return;
+  chrome.runtime.sendMessage(message).catch(() => {
+    // Ignore if extension context is invalid
+  });
+}
+
 export default defineContentScript({
   matches: ["<all_urls>"],
   runAt: "document_start",
@@ -16,20 +31,17 @@ export default defineContentScript({
     window.addEventListener(
       "__AI_PROMPT_CAPTURED__",
       ((event: CustomEvent<CapturedAIPrompt>) => {
-        chrome.runtime
-          .sendMessage({
-            type: "AI_PROMPT_CAPTURED",
-            data: event.detail,
-          })
-          .catch(() => {
-            // Ignore if extension context is invalid
-          });
+        safeSendMessage({
+          type: "AI_PROMPT_CAPTURED",
+          data: event.detail,
+        });
       }) as EventListener
     );
   },
 });
 
 function injectAIHooksScript() {
+  if (!isExtensionContextValid()) return;
   const script = document.createElement("script");
   script.src = chrome.runtime.getURL("/ai-hooks.js");
   script.onload = () => {
