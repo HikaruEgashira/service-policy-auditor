@@ -19,6 +19,7 @@ interface Stats {
 
 type Period = "1h" | "24h" | "7d" | "30d" | "all";
 type TabType = "overview" | "violations" | "network" | "domains" | "ai" | "services" | "events";
+type OperationMode = "risk" | "daily" | "investigation";
 
 function truncate(str: string, len: number): string {
   return str && str.length > len ? str.substring(0, len) + "..." : str || "";
@@ -37,6 +38,47 @@ function getPeriodMs(period: Period): number {
     default:
       return Number.MAX_SAFE_INTEGER;
   }
+}
+
+function OperationModeSelector({
+  mode,
+  onChange,
+}: {
+  mode: OperationMode;
+  onChange: (m: OperationMode) => void;
+}) {
+  const modes: { id: OperationMode; label: string; icon: string; desc: string }[] = [
+    { id: "risk", label: "リスク監視", icon: "⚠", desc: "重大な問題に集中" },
+    { id: "daily", label: "日常確認", icon: "📊", desc: "通常の監視業務" },
+    { id: "investigation", label: "詳細調査", icon: "🔍", desc: "問題の深掘り調査" },
+  ];
+  return (
+    <div style={{ display: "flex", gap: "8px" }}>
+      {modes.map((m) => (
+        <button
+          key={m.id}
+          style={{
+            padding: "8px 16px",
+            border: mode === m.id ? "2px solid hsl(0 0% 20%)" : "1px solid hsl(0 0% 80%)",
+            borderRadius: "6px",
+            background: mode === m.id ? "hsl(0 0% 20%)" : "white",
+            color: mode === m.id ? "white" : "hsl(0 0% 30%)",
+            cursor: "pointer",
+            fontSize: "13px",
+            fontWeight: mode === m.id ? 600 : 400,
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+          onClick={() => onChange(m.id)}
+          title={m.desc}
+        >
+          <span>{m.icon}</span>
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function PeriodSelector({
@@ -172,6 +214,95 @@ function AlertSummary({
           )}
         </ul>
       </div>
+    </div>
+  );
+}
+
+// アクションアイテムリスト（運用者向け）
+interface ActionItem {
+  id: string;
+  priority: "critical" | "high" | "medium" | "low";
+  title: string;
+  description: string;
+  action: () => void;
+  actionLabel: string;
+}
+
+function ActionList({
+  items,
+  mode,
+}: {
+  items: ActionItem[];
+  mode: OperationMode;
+}) {
+  // モードに応じてフィルタリング
+  const filteredItems = useMemo(() => {
+    if (mode === "risk") {
+      return items.filter((i) => i.priority === "critical" || i.priority === "high");
+    }
+    if (mode === "daily") {
+      return items.slice(0, 5);
+    }
+    return items;
+  }, [items, mode]);
+
+  const priorityStyles: Record<string, { bg: string; border: string; icon: string }> = {
+    critical: { bg: "hsl(0 80% 95%)", border: "hsl(0 70% 50%)", icon: "🔴" },
+    high: { bg: "hsl(30 80% 95%)", border: "hsl(30 70% 50%)", icon: "🟠" },
+    medium: { bg: "hsl(45 80% 95%)", border: "hsl(45 70% 50%)", icon: "🟡" },
+    low: { bg: "hsl(0 0% 96%)", border: "hsl(0 0% 70%)", icon: "⚪" },
+  };
+
+  if (filteredItems.length === 0) {
+    return (
+      <div style={{ padding: "24px", textAlign: "center", color: "hsl(0 0% 50%)" }}>
+        対応が必要なアクションはありません
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {filteredItems.map((item) => {
+        const style = priorityStyles[item.priority];
+        return (
+          <div
+            key={item.id}
+            style={{
+              padding: "12px 16px",
+              background: style.bg,
+              borderLeft: `4px solid ${style.border}`,
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+              <span style={{ fontSize: "16px" }}>{style.icon}</span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "13px" }}>{item.title}</div>
+                <div style={{ fontSize: "12px", color: "hsl(0 0% 45%)" }}>{item.description}</div>
+              </div>
+            </div>
+            <button
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                background: "white",
+                border: `1px solid ${style.border}`,
+                borderRadius: "4px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+              onClick={item.action}
+            >
+              {item.actionLabel}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -726,6 +857,9 @@ function ServicesTable({
     if (q === "login") {
       return services.filter((s) => s.hasLoginPage);
     }
+    if (q === "no-policy") {
+      return services.filter((s) => !s.privacyPolicyUrl && !s.termsOfServiceUrl);
+    }
 
     return services.filter(
       (s) =>
@@ -958,6 +1092,7 @@ export function DashboardApp() {
   const [events, setEvents] = useState<EventLog[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [operationMode, setOperationMode] = useState<OperationMode>("daily");
 
   // タブ変更時にURLハッシュを更新
   useEffect(() => {
@@ -1167,6 +1302,100 @@ export function DashboardApp() {
   const nrdServices = services.filter((s) => s.nrdResult?.isNRD);
   const loginServices = services.filter((s) => s.hasLoginPage);
 
+  // アクションアイテム生成
+  const actionItems = useMemo((): ActionItem[] => {
+    const items: ActionItem[] = [];
+
+    // NRD検出（Critical）
+    nrdServices.forEach((s, i) => {
+      items.push({
+        id: `nrd-${i}`,
+        priority: "critical",
+        title: `新規登録ドメイン(NRD)検出: ${s.domain}`,
+        description: `ドメイン経過日数: ${s.nrdResult?.domainAge || "不明"}日 - フィッシングの可能性を確認`,
+        action: () => {
+          setActiveTab("services");
+          setSearchQuery(s.domain);
+        },
+        actionLabel: "確認する",
+      });
+    });
+
+    // 重要CSP違反（High）
+    const criticalViolations = violations.filter((v) =>
+      ["script-src", "default-src"].includes(v.directive)
+    );
+    if (criticalViolations.length > 0) {
+      items.push({
+        id: "csp-critical",
+        priority: "high",
+        title: `重要CSP違反: ${criticalViolations.length}件`,
+        description: "script-src, default-srcの違反を確認してください",
+        action: () => {
+          setActiveTab("violations");
+          setDirectiveFilter("script-src");
+        },
+        actionLabel: "違反を確認",
+      });
+    }
+
+    // AIプロンプト送信（High）
+    if (aiPrompts.length > 0) {
+      const recentAI = aiPrompts.filter(
+        (p) => Date.now() - p.timestamp < 60 * 60 * 1000
+      );
+      if (recentAI.length > 0) {
+        items.push({
+          id: "ai-recent",
+          priority: "high",
+          title: `直近1時間のAIプロンプト: ${recentAI.length}件`,
+          description: "機密情報の送信がないか確認してください",
+          action: () => setActiveTab("ai"),
+          actionLabel: "確認する",
+        });
+      }
+    }
+
+    // ログインページ検出（Medium）
+    if (loginServices.length > 0) {
+      items.push({
+        id: "login-detected",
+        priority: "medium",
+        title: `ログインページ検出: ${loginServices.length}サービス`,
+        description: "新しく検出されたログインページを確認",
+        action: () => {
+          setActiveTab("services");
+          setSearchQuery("login");
+        },
+        actionLabel: "サービス確認",
+      });
+    }
+
+    // CSP違反多発（Medium）
+    if (violations.length > 20) {
+      items.push({
+        id: "csp-many",
+        priority: "medium",
+        title: `CSP違反が多発: ${violations.length}件`,
+        description: "CSPポリシーの見直しを検討してください",
+        action: () => setActiveTab("domains"),
+        actionLabel: "ドメイン分析",
+      });
+    }
+
+    // 日常確認項目（Low）
+    items.push({
+      id: "daily-check",
+      priority: "low",
+      title: "日常確認: イベントログ",
+      description: `本日のイベント: ${events.filter((e) => Date.now() - e.timestamp < 24 * 60 * 60 * 1000).length}件`,
+      action: () => setActiveTab("events"),
+      actionLabel: "ログ確認",
+    });
+
+    return items;
+  }, [nrdServices, violations, aiPrompts, loginServices, events]);
+
   const tabs: { id: TabType; label: string; count?: number }[] = [
     { id: "overview", label: "概要" },
     { id: "violations", label: "CSP違反", count: violations.length },
@@ -1207,10 +1436,11 @@ export function DashboardApp() {
           </div>
           <p style={dashboardStyles.subtitle}>
             Browser Security Monitor | 更新: {new Date(lastUpdated).toLocaleString("ja-JP")} |
-            モード: {connectionMode}
+            接続: {connectionMode}
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <OperationModeSelector mode={operationMode} onChange={setOperationMode} />
           <PeriodSelector period={period} onChange={setPeriod} />
           <button
             style={{
@@ -1295,10 +1525,19 @@ export function DashboardApp() {
             </ul>
 
             <h3 style={{ fontSize: "14px", margin: "16px 0 8px", color: "hsl(0 0% 40%)" }}>
+              運用モード
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px" }}>
+              <li><strong>リスク監視</strong>: 重大なセキュリティ問題に集中（NRD、重要CSP違反）</li>
+              <li><strong>日常確認</strong>: 通常の監視業務用（上位5件のアクションを表示）</li>
+              <li><strong>詳細調査</strong>: 特定の問題を深掘り（全アクション・詳細フィルター）</li>
+            </ul>
+
+            <h3 style={{ fontSize: "14px", margin: "16px 0 8px", color: "hsl(0 0% 40%)" }}>
               タブ説明
             </h3>
             <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px" }}>
-              <li><strong>概要</strong>: クイックアクション、グラフ、最近のイベント</li>
+              <li><strong>概要</strong>: アクションリスト、セキュリティスコア、統計</li>
               <li><strong>CSP違反</strong>: Content Security Policy違反の詳細</li>
               <li><strong>ネットワーク</strong>: 外部リクエストの監視</li>
               <li><strong>ドメイン分析</strong>: ドメイン別の統計とCSPポリシー生成</li>
@@ -1419,75 +1658,95 @@ export function DashboardApp() {
 
       {activeTab === "overview" && (
         <>
-          {/* セキュリティスコア */}
-          <div style={{ ...dashboardStyles.card, marginBottom: "24px", display: "flex", alignItems: "center", gap: "24px" }}>
-            <div style={{ textAlign: "center", minWidth: "120px" }}>
-              <div
-                style={{
-                  fontSize: "48px",
-                  fontWeight: 700,
-                  color: nrdServices.length > 0
-                    ? "hsl(0 70% 50%)"
-                    : violations.length > 50
-                      ? "hsl(45 100% 40%)"
-                      : violations.length > 10
-                        ? "hsl(45 100% 50%)"
-                        : "hsl(120 50% 40%)",
-                }}
-              >
-                {Math.max(0, 100 - (nrdServices.length * 30) - (violations.length * 0.5) - (aiPrompts.length * 2)).toFixed(0)}
+          {/* セキュリティスコアとモード説明 */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+            <div style={{ ...dashboardStyles.card, display: "flex", alignItems: "center", gap: "24px" }}>
+              <div style={{ textAlign: "center", minWidth: "120px" }}>
+                <div
+                  style={{
+                    fontSize: "48px",
+                    fontWeight: 700,
+                    color: nrdServices.length > 0
+                      ? "hsl(0 70% 50%)"
+                      : violations.length > 50
+                        ? "hsl(45 100% 40%)"
+                        : violations.length > 10
+                          ? "hsl(45 100% 50%)"
+                          : "hsl(120 50% 40%)",
+                  }}
+                >
+                  {Math.max(0, 100 - (nrdServices.length * 30) - (violations.length * 0.5) - (aiPrompts.length * 2)).toFixed(0)}
+                </div>
+                <div style={{ fontSize: "12px", color: "hsl(0 0% 50%)", textTransform: "uppercase" }}>
+                  セキュリティスコア
+                </div>
               </div>
-              <div style={{ fontSize: "12px", color: "hsl(0 0% 50%)", textTransform: "uppercase" }}>
-                セキュリティスコア
+              <div style={{ flex: 1, fontSize: "13px", color: "hsl(0 0% 40%)" }}>
+                <div style={{ marginBottom: "8px" }}>
+                  <strong>評価基準:</strong>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: 1.8 }}>
+                  <li>NRD検出: <span style={{ color: nrdServices.length > 0 ? "hsl(0 70% 50%)" : "hsl(120 50% 40%)" }}>{nrdServices.length}件 (-30点/件)</span></li>
+                  <li>CSP違反: <span style={{ color: violations.length > 50 ? "hsl(0 70% 50%)" : "hsl(0 0% 40%)" }}>{violations.length}件 (-0.5点/件)</span></li>
+                  <li>AIプロンプト: <span style={{ color: aiPrompts.length > 0 ? "hsl(45 100% 40%)" : "hsl(0 0% 40%)" }}>{aiPrompts.length}件 (-2点/件)</span></li>
+                </ul>
               </div>
             </div>
-            <div style={{ flex: 1, fontSize: "13px", color: "hsl(0 0% 40%)" }}>
-              <div style={{ marginBottom: "8px" }}>
-                <strong>評価基準:</strong>
+            <div style={dashboardStyles.card}>
+              <div style={{ marginBottom: "12px" }}>
+                <strong style={{ fontSize: "14px" }}>
+                  {operationMode === "risk" && "⚠ リスク監視モード"}
+                  {operationMode === "daily" && "📊 日常確認モード"}
+                  {operationMode === "investigation" && "🔍 詳細調査モード"}
+                </strong>
               </div>
-              <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: 1.8 }}>
-                <li>NRD検出: <span style={{ color: nrdServices.length > 0 ? "hsl(0 70% 50%)" : "hsl(120 50% 40%)" }}>{nrdServices.length}件 (-30点/件)</span></li>
-                <li>CSP違反: <span style={{ color: violations.length > 50 ? "hsl(0 70% 50%)" : "hsl(0 0% 40%)" }}>{violations.length}件 (-0.5点/件)</span></li>
-                <li>AIプロンプト: <span style={{ color: aiPrompts.length > 0 ? "hsl(45 100% 40%)" : "hsl(0 0% 40%)" }}>{aiPrompts.length}件 (-2点/件)</span></li>
-              </ul>
+              <div style={{ fontSize: "13px", color: "hsl(0 0% 45%)", lineHeight: 1.6 }}>
+                {operationMode === "risk" && (
+                  <>
+                    <p style={{ margin: "0 0 8px" }}>重大なセキュリティリスクに集中するモードです。</p>
+                    <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                      <li>NRD（新規登録ドメイン）の確認</li>
+                      <li>重要CSP違反の対応</li>
+                      <li>AIプロンプト送信の監視</li>
+                    </ul>
+                  </>
+                )}
+                {operationMode === "daily" && (
+                  <>
+                    <p style={{ margin: "0 0 8px" }}>通常の監視業務に適したモードです。</p>
+                    <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                      <li>上位5件のアクションを表示</li>
+                      <li>全体のセキュリティ状況を確認</li>
+                      <li>定期的なログチェック</li>
+                    </ul>
+                  </>
+                )}
+                {operationMode === "investigation" && (
+                  <>
+                    <p style={{ margin: "0 0 8px" }}>特定の問題を深掘りするモードです。</p>
+                    <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                      <li>全てのアクションを表示</li>
+                      <li>詳細なフィルタリング</li>
+                      <li>根本原因の特定</li>
+                    </ul>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* クイックアクション */}
+          {/* アクションリスト */}
           <div style={dashboardStyles.section}>
-            <h3 style={dashboardStyles.cardTitle}>クイックアクション</h3>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <button
-                style={dashboardStyles.btn}
-                onClick={() => setActiveTab("violations")}
-              >
-                CSP違反を確認 ({violations.length})
-              </button>
-              {nrdServices.length > 0 && (
-                <button
-                  style={{
-                    ...dashboardStyles.btn,
-                    background: "hsl(0 70% 50%)",
-                  }}
-                  onClick={() => setActiveTab("services")}
-                >
-                  NRD検出あり ({nrdServices.length})
-                </button>
-              )}
-              {aiPrompts.length > 0 && (
-                <button
-                  style={dashboardStyles.btnSecondary}
-                  onClick={() => setActiveTab("ai")}
-                >
-                  AIプロンプト確認 ({aiPrompts.length})
-                </button>
-              )}
-              <button
-                style={dashboardStyles.btnSecondary}
-                onClick={() => setActiveTab("services")}
-              >
-                サービス一覧 ({services.length})
-              </button>
+            <div style={dashboardStyles.sectionHeader}>
+              <h3 style={dashboardStyles.cardTitle}>
+                対応アクション
+                <span style={{ fontSize: "12px", fontWeight: 400, marginLeft: "8px", color: "hsl(0 0% 50%)" }}>
+                  ({actionItems.filter((i) => i.priority === "critical" || i.priority === "high").length}件の重要アクション)
+                </span>
+              </h3>
+            </div>
+            <div style={dashboardStyles.card}>
+              <ActionList items={actionItems} mode={operationMode} />
             </div>
           </div>
 
@@ -1712,6 +1971,54 @@ export function DashboardApp() {
             </span>
           </div>
 
+          {/* リスクレベル別クイックフィルター */}
+          <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
+            <button
+              style={{
+                ...dashboardStyles.btnSmall,
+                background: searchQuery === "" ? "hsl(0 0% 20%)" : "white",
+                color: searchQuery === "" ? "white" : "hsl(0 0% 30%)",
+                border: "1px solid hsl(0 0% 70%)",
+              }}
+              onClick={() => setSearchQuery("")}
+            >
+              全て ({services.length})
+            </button>
+            <button
+              style={{
+                ...dashboardStyles.btnSmall,
+                background: searchQuery === "nrd" ? "hsl(0 70% 50%)" : "hsl(0 80% 95%)",
+                color: searchQuery === "nrd" ? "white" : "hsl(0 70% 40%)",
+                border: `1px solid hsl(0 70% 50%)`,
+              }}
+              onClick={() => setSearchQuery(searchQuery === "nrd" ? "" : "nrd")}
+            >
+              🔴 NRD ({nrdServices.length})
+            </button>
+            <button
+              style={{
+                ...dashboardStyles.btnSmall,
+                background: searchQuery === "login" ? "hsl(45 100% 40%)" : "hsl(45 80% 95%)",
+                color: searchQuery === "login" ? "white" : "hsl(45 80% 30%)",
+                border: `1px solid hsl(45 100% 40%)`,
+              }}
+              onClick={() => setSearchQuery(searchQuery === "login" ? "" : "login")}
+            >
+              🟡 ログイン ({loginServices.length})
+            </button>
+            <button
+              style={{
+                ...dashboardStyles.btnSmall,
+                background: searchQuery === "no-policy" ? "hsl(210 100% 45%)" : "hsl(210 80% 95%)",
+                color: searchQuery === "no-policy" ? "white" : "hsl(210 80% 35%)",
+                border: `1px solid hsl(210 100% 45%)`,
+              }}
+              onClick={() => setSearchQuery(searchQuery === "no-policy" ? "" : "no-policy")}
+            >
+              🔵 ポリシー未検出 ({services.filter((s) => !s.privacyPolicyUrl && !s.termsOfServiceUrl).length})
+            </button>
+          </div>
+
           {/* サービス統計サマリー */}
           <div style={{ ...dashboardStyles.statsGrid, marginBottom: "16px" }}>
             <div style={dashboardStyles.statCard}>
@@ -1748,22 +2055,6 @@ export function DashboardApp() {
                 value={searchQuery}
                 onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
               />
-            </div>
-            <div style={dashboardStyles.filterGroup}>
-              <label style={dashboardStyles.filterLabel}>フィルタ:</label>
-              <select
-                style={dashboardStyles.filterSelect}
-                onChange={(e) => {
-                  const val = (e.target as HTMLSelectElement).value;
-                  if (val === "nrd") setSearchQuery("NRD");
-                  else if (val === "login") setSearchQuery("login");
-                  else setSearchQuery("");
-                }}
-              >
-                <option value="">すべて</option>
-                <option value="nrd">NRDのみ</option>
-                <option value="login">ログインページのみ</option>
-              </select>
             </div>
           </div>
           <ServicesTable services={services} searchQuery={searchQuery} />
