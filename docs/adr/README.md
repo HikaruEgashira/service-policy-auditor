@@ -8,3 +8,4 @@
 | [004](./004-privacy-policy-detection.md) | プライバシーポリシーはURLパターンとリンクテキストで特定する | Accepted |
 | [005](./005-design-system.md) | グレースケール・ミニマルデザインシステム | Accepted |
 | [006](./006-tos-detection.md) | 利用規約検出機能 | Accepted |
+| [007](./007-shared-utilities.md) | 共通ユーティリティ層の導入 | Accepted |
