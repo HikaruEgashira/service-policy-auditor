@@ -16,16 +16,29 @@ export const PRIVACY_URL_PATTERNS = [
   /\/terms\/privacy/i,
   /\/about\/privacy/i,
   /\/privacypolicy/i,
+  // German
+  /\/datenschutz/i,
+  // Japanese (decoded)
+  /プライバシー/,
 ];
 
 // Privacy policy link text patterns (multilingual)
 export const PRIVACY_TEXT_PATTERNS = [
   /privacy\s*policy/i,
   /privacy\s*notice/i,
+  /privacy/i,
   /プライバシー\s*ポリシー/,
+  /プライバシー/,
   /個人情報\s*保護/,
   /個人情報の取り扱い/,
   /個人情報について/,
+  // German
+  /datenschutz/i,
+  // Korean
+  /개인정보/,
+  // Chinese
+  /隐私/,
+  /隱私/,
 ];
 
 // Privacy metadata patterns

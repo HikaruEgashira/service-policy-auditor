@@ -29,10 +29,27 @@ function decodeUrlSafe(url: string): string {
   }
 }
 
+function getPathFromUrl(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
 function isPrivacyUrlWithDecode(url: string): boolean {
-  if (isPrivacyUrl(url)) return true;
-  const decoded = decodeUrlSafe(url);
-  return decoded !== url && isPrivacyUrl(decoded);
+  // Extract pathname to avoid matching domain parts
+  const pathname = getPathFromUrl(url);
+  const decoded = decodeUrlSafe(pathname);
+
+  // Check URL patterns
+  if (isPrivacyUrl(pathname)) return true;
+  if (decoded !== pathname && isPrivacyUrl(decoded)) return true;
+
+  // Also check text patterns on decoded pathname (for Japanese/CJK URLs)
+  if (isPrivacyText(decoded)) return true;
+
+  return false;
 }
 
 function findFromLinkRel(): string | null {
