@@ -1,8 +1,5 @@
 /**
- * @fileoverview AI Prompt Monitoring Types
- *
- * AIプロンプト収集機能のための型定義。
- * リクエスト構造による汎用検出を行い、Shadow AI監視とDLPを実現する。
+ * AI Prompt Monitoring Types
  */
 
 // ============================================================================

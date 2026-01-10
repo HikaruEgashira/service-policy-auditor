@@ -19,11 +19,6 @@
   const originalXHROpen = XMLHttpRequest.prototype.open
   const originalXHRSend = XMLHttpRequest.prototype.send
 
-  // ===== Request Structure Detection =====
-
-  /**
-   * Check if request body has AI service structure
-   */
   function isAIRequestBody(body) {
     if (!body) return false
 
@@ -70,8 +65,6 @@
       c.parts.some(p => p && typeof p === 'object' && 'text' in p)
     )
   }
-
-  // ===== Prompt Extraction =====
 
   function extractPrompt(body) {
     if (!body) return null
@@ -156,8 +149,6 @@
     }
     return ''
   }
-
-  // ===== Response Extraction =====
 
   function extractResponse(text, isStreaming) {
     const contentSize = text.length
@@ -247,8 +238,6 @@
     return truncateString(chunks.join(''), TRUNCATE_SIZE)
   }
 
-  // ===== Provider Inference =====
-
   function inferProvider(text) {
     try {
       // Anthropic streaming indicator
@@ -281,8 +270,6 @@
     }
   }
 
-  // ===== Utilities =====
-
   function truncateString(str, maxLength) {
     if (str.length <= maxLength) return str
     return str.substring(0, maxLength)
@@ -297,8 +284,6 @@
       new CustomEvent('__AI_PROMPT_CAPTURED__', { detail: data })
     )
   }
-
-  // ===== FETCH API HOOK =====
 
   window.fetch = async function(input, init) {
     const url = typeof input === 'string' ? input : input?.url
@@ -365,8 +350,6 @@
       throw error
     }
   }
-
-  // ===== XHR HOOK =====
 
   XMLHttpRequest.prototype.open = function(method, url, ...rest) {
     this.__aiCaptureUrl = url

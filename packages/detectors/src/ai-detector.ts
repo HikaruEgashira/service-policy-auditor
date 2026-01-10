@@ -1,10 +1,6 @@
 /**
- * @fileoverview AI Request Detection
- *
- * リクエスト/レスポンス構造による汎用AIサービス検出。
- * URLパターンは使用せず、ボディ構造のみで判定する。
+ * AI Request Detection
  */
-
 import type {
   InferredProvider,
   AIPromptContent,
