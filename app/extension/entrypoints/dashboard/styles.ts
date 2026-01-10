@@ -2,21 +2,29 @@ import type { CSSProperties } from "preact/compat";
 
 export const dashboardStyles: Record<string, CSSProperties> = {
   container: {
-    maxWidth: "1200px",
+    maxWidth: "1400px",
     margin: "0 auto",
     padding: "24px",
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     color: "hsl(0 0% 10%)",
     lineHeight: 1.5,
+    background: "hsl(0 0% 98%)",
+    minHeight: "100vh",
   },
   header: {
     marginBottom: "24px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerLeft: {
+    flex: 1,
   },
   title: {
     fontSize: "24px",
     fontWeight: 600,
     margin: 0,
-    marginBottom: "8px",
+    marginBottom: "4px",
   },
   subtitle: {
     color: "hsl(0 0% 50%)",
@@ -27,29 +35,143 @@ export const dashboardStyles: Record<string, CSSProperties> = {
     padding: "48px",
     color: "hsl(0 0% 60%)",
   },
+  // Alert/Summary section
+  alertSection: {
+    marginBottom: "24px",
+  },
+  alertCard: {
+    background: "white",
+    padding: "16px 20px",
+    borderRadius: "4px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    borderLeft: "4px solid hsl(0 0% 60%)",
+  },
+  alertCardWarning: {
+    background: "white",
+    padding: "16px 20px",
+    borderRadius: "4px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    borderLeft: "4px solid hsl(45 100% 40%)",
+  },
+  alertCardDanger: {
+    background: "white",
+    padding: "16px 20px",
+    borderRadius: "4px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    borderLeft: "4px solid hsl(0 70% 50%)",
+  },
+  alertTitle: {
+    fontSize: "14px",
+    fontWeight: 600,
+    marginBottom: "8px",
+    color: "hsl(0 0% 20%)",
+  },
+  alertList: {
+    margin: 0,
+    paddingLeft: "20px",
+    fontSize: "13px",
+    color: "hsl(0 0% 40%)",
+  },
+  // Stats Grid
   statsGrid: {
-    display: "flex",
-    gap: "24px",
-    flexWrap: "wrap",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "16px",
     marginBottom: "24px",
   },
   statCard: {
     background: "white",
-    padding: "16px 24px",
+    padding: "16px 20px",
     borderRadius: "4px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   },
   statValue: {
-    fontSize: "32px",
+    fontSize: "28px",
     fontWeight: 700,
     color: "hsl(0 0% 20%)",
   },
   statLabel: {
-    fontSize: "12px",
+    fontSize: "11px",
     color: "hsl(0 0% 50%)",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
   },
+  statTrend: {
+    fontSize: "11px",
+    marginTop: "4px",
+  },
+  statTrendUp: {
+    color: "hsl(0 70% 50%)",
+  },
+  statTrendDown: {
+    color: "hsl(120 50% 40%)",
+  },
+  // Filter/Search bar
+  filterBar: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: "16px",
+    padding: "12px 16px",
+    background: "white",
+    borderRadius: "4px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+  },
+  filterGroup: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  filterLabel: {
+    fontSize: "12px",
+    color: "hsl(0 0% 50%)",
+    fontWeight: 500,
+  },
+  filterInput: {
+    padding: "6px 12px",
+    border: "1px solid hsl(0 0% 85%)",
+    borderRadius: "4px",
+    fontSize: "13px",
+    minWidth: "200px",
+    outline: "none",
+  },
+  filterSelect: {
+    padding: "6px 12px",
+    border: "1px solid hsl(0 0% 85%)",
+    borderRadius: "4px",
+    fontSize: "13px",
+    background: "white",
+    cursor: "pointer",
+  },
+  // Period selector
+  periodSelector: {
+    display: "flex",
+    gap: "4px",
+    background: "hsl(0 0% 95%)",
+    padding: "4px",
+    borderRadius: "4px",
+  },
+  periodBtn: {
+    padding: "6px 12px",
+    border: "none",
+    borderRadius: "2px",
+    fontSize: "12px",
+    background: "transparent",
+    color: "hsl(0 0% 40%)",
+    cursor: "pointer",
+  },
+  periodBtnActive: {
+    padding: "6px 12px",
+    border: "none",
+    borderRadius: "2px",
+    fontSize: "12px",
+    background: "white",
+    color: "hsl(0 0% 20%)",
+    cursor: "pointer",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+  },
+  // Actions
   actions: {
     display: "flex",
     alignItems: "center",
@@ -74,19 +196,41 @@ export const dashboardStyles: Record<string, CSSProperties> = {
     cursor: "pointer",
     fontSize: "13px",
   },
+  btnSmall: {
+    padding: "4px 8px",
+    background: "hsl(0 0% 95%)",
+    color: "hsl(0 0% 40%)",
+    border: "none",
+    borderRadius: "2px",
+    cursor: "pointer",
+    fontSize: "11px",
+  },
   refreshNote: {
     fontSize: "12px",
     color: "hsl(0 0% 60%)",
     marginLeft: "auto",
   },
+  // Section
   section: {
     marginBottom: "24px",
   },
-  sectionTitle: {
-    fontSize: "18px",
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: "12px",
-    color: "hsl(0 0% 30%)",
   },
+  sectionTitle: {
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "hsl(0 0% 30%)",
+    margin: 0,
+  },
+  sectionCount: {
+    fontSize: "12px",
+    color: "hsl(0 0% 50%)",
+  },
+  // Card
   card: {
     background: "white",
     padding: "16px",
@@ -94,7 +238,8 @@ export const dashboardStyles: Record<string, CSSProperties> = {
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   },
   cardTitle: {
-    fontSize: "14px",
+    fontSize: "13px",
+    fontWeight: 600,
     marginBottom: "12px",
     color: "hsl(0 0% 40%)",
     textTransform: "uppercase",
@@ -102,9 +247,10 @@ export const dashboardStyles: Record<string, CSSProperties> = {
   },
   statsColumns: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
     gap: "16px",
   },
+  // Table
   table: {
     width: "100%",
     borderCollapse: "collapse",
@@ -121,6 +267,18 @@ export const dashboardStyles: Record<string, CSSProperties> = {
     padding: "8px 12px",
     textAlign: "left",
   },
+  thSortable: {
+    background: "hsl(0 0% 97%)",
+    borderBottom: "1px solid hsl(0 0% 85%)",
+    fontWeight: 600,
+    fontSize: "11px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    color: "hsl(0 0% 50%)",
+    padding: "8px 12px",
+    textAlign: "left",
+    cursor: "pointer",
+  },
   td: {
     padding: "8px 12px",
     borderBottom: "1px solid hsl(0 0% 95%)",
@@ -132,20 +290,41 @@ export const dashboardStyles: Record<string, CSSProperties> = {
     maxWidth: "300px",
   },
   tr: {},
+  trHighlight: {
+    background: "hsl(45 100% 97%)",
+  },
+  // Code/Badge
   code: {
-    fontFamily: "'Menlo', monospace",
+    fontFamily: "'Menlo', 'Monaco', monospace",
     fontSize: "11px",
     background: "hsl(0 0% 95%)",
-    padding: "2px 4px",
+    padding: "2px 6px",
     borderRadius: "2px",
   },
   badge: {
     display: "inline-block",
-    padding: "2px 6px",
+    padding: "2px 8px",
     background: "hsl(0 0% 90%)",
     borderRadius: "2px",
     fontSize: "11px",
   },
+  badgeWarning: {
+    display: "inline-block",
+    padding: "2px 8px",
+    background: "hsl(45 100% 90%)",
+    color: "hsl(45 100% 25%)",
+    borderRadius: "2px",
+    fontSize: "11px",
+  },
+  badgeDanger: {
+    display: "inline-block",
+    padding: "2px 8px",
+    background: "hsl(0 70% 95%)",
+    color: "hsl(0 70% 40%)",
+    borderRadius: "2px",
+    fontSize: "11px",
+  },
+  // Empty state
   empty: {
     color: "hsl(0 0% 60%)",
     padding: "24px",
@@ -155,5 +334,81 @@ export const dashboardStyles: Record<string, CSSProperties> = {
     padding: "8px",
     color: "hsl(0 0% 60%)",
     fontSize: "12px",
+  },
+  // Chart placeholder
+  chartContainer: {
+    height: "200px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  chartBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  chartLabel: {
+    fontSize: "11px",
+    color: "hsl(0 0% 50%)",
+    width: "100px",
+    textOverflow: "ellipsis",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+  },
+  chartBarInner: {
+    height: "20px",
+    background: "hsl(0 0% 80%)",
+    borderRadius: "2px",
+    minWidth: "4px",
+  },
+  chartValue: {
+    fontSize: "11px",
+    color: "hsl(0 0% 50%)",
+    minWidth: "40px",
+  },
+  // Tabs
+  tabs: {
+    display: "flex",
+    gap: "0",
+    borderBottom: "1px solid hsl(0 0% 85%)",
+    marginBottom: "16px",
+  },
+  tab: {
+    padding: "10px 20px",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    background: "transparent",
+    fontSize: "13px",
+    color: "hsl(0 0% 50%)",
+    cursor: "pointer",
+  },
+  tabActive: {
+    padding: "10px 20px",
+    border: "none",
+    borderBottom: "2px solid hsl(0 0% 20%)",
+    background: "transparent",
+    fontSize: "13px",
+    color: "hsl(0 0% 20%)",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  // Grid layouts
+  twoColumn: {
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr",
+    gap: "24px",
+  },
+  // Pagination
+  pagination: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "16px",
+    padding: "12px",
+  },
+  pageInfo: {
+    fontSize: "12px",
+    color: "hsl(0 0% 50%)",
   },
 };
