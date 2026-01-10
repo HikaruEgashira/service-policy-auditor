@@ -949,6 +949,7 @@ export function DashboardApp() {
   const [aiPrompts, setAIPrompts] = useState<CapturedAIPrompt[]>([]);
   const [services, setServices] = useState<DetectedService[]>([]);
   const [events, setEvents] = useState<EventLog[]>([]);
+  const [showHelp, setShowHelp] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -1014,10 +1015,15 @@ export function DashboardApp() {
         const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
         searchInput?.focus();
       }
-      // Escape で検索クリア
+      // Escape で検索クリア/ヘルプ閉じる
       if (e.key === "Escape") {
         setSearchQuery("");
         setDirectiveFilter("");
+        setShowHelp(false);
+      }
+      // ? でヘルプ表示
+      if (e.key === "?" && !(e.target instanceof HTMLInputElement)) {
+        setShowHelp((v) => !v);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -1176,8 +1182,112 @@ export function DashboardApp() {
             モード: {connectionMode}
           </p>
         </div>
-        <PeriodSelector period={period} onChange={setPeriod} />
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <PeriodSelector period={period} onChange={setPeriod} />
+          <button
+            style={{
+              ...dashboardStyles.btnSmall,
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "14px",
+            }}
+            onClick={() => setShowHelp(true)}
+            title="ヘルプ (?)"
+          >
+            ?
+          </button>
+        </div>
       </header>
+
+      {/* ヘルプモーダル */}
+      {showHelp && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "8px",
+              padding: "24px",
+              maxWidth: "500px",
+              width: "90%",
+              maxHeight: "80vh",
+              overflow: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 16px", fontSize: "18px" }}>CASB Dashboard ヘルプ</h2>
+
+            <h3 style={{ fontSize: "14px", margin: "16px 0 8px", color: "hsl(0 0% 40%)" }}>
+              キーボードショートカット
+            </h3>
+            <table style={{ width: "100%", fontSize: "13px", borderCollapse: "collapse" }}>
+              <tbody>
+                {[
+                  ["Ctrl/Cmd + 1-7", "タブ切り替え"],
+                  ["R", "データ更新"],
+                  ["/", "検索にフォーカス"],
+                  ["Escape", "検索クリア / ヘルプ閉じる"],
+                  ["?", "ヘルプ表示"],
+                ].map(([key, desc]) => (
+                  <tr key={key} style={{ borderBottom: "1px solid hsl(0 0% 90%)" }}>
+                    <td style={{ padding: "8px 0" }}>
+                      <code style={dashboardStyles.code}>{key}</code>
+                    </td>
+                    <td style={{ padding: "8px 0" }}>{desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h3 style={{ fontSize: "14px", margin: "16px 0 8px", color: "hsl(0 0% 40%)" }}>
+              ステータスバッジ
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px" }}>
+              <li><strong style={{ color: "hsl(0 70% 50%)" }}>要対応</strong>: NRD（新規登録ドメイン）検出</li>
+              <li><strong style={{ color: "hsl(45 100% 40%)" }}>注意</strong>: CSP違反50件以上</li>
+              <li><strong style={{ color: "hsl(210 100% 45%)" }}>監視中</strong>: AIプロンプト送信あり</li>
+              <li><strong style={{ color: "hsl(120 50% 40%)" }}>正常</strong>: 問題なし</li>
+            </ul>
+
+            <h3 style={{ fontSize: "14px", margin: "16px 0 8px", color: "hsl(0 0% 40%)" }}>
+              タブ説明
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px" }}>
+              <li><strong>概要</strong>: クイックアクション、グラフ、最近のイベント</li>
+              <li><strong>CSP違反</strong>: Content Security Policy違反の詳細</li>
+              <li><strong>ネットワーク</strong>: 外部リクエストの監視</li>
+              <li><strong>ドメイン分析</strong>: ドメイン別の統計とCSPポリシー生成</li>
+              <li><strong>AI監視</strong>: AIサービスへのプロンプト送信監視</li>
+              <li><strong>サービス</strong>: 検出したSaaSサービス一覧</li>
+              <li><strong>イベント</strong>: 全イベントログ</li>
+            </ul>
+
+            <button
+              style={{ ...dashboardStyles.btn, marginTop: "20px", width: "100%" }}
+              onClick={() => setShowHelp(false)}
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
 
       <AlertSummary
         violations={violations}
