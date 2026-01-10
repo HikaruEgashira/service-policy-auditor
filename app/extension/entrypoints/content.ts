@@ -49,8 +49,10 @@ async function sendToBackground(analysis: PageAnalysis) {
 
 function runAnalysis() {
   const analysis = analyzePage();
+  const { login, privacy, tos } = analysis;
 
-  if (loginDetector.isLoginPage() || analysis.privacy.found || analysis.tos.found) {
+  // Send to background if any policy-relevant info found
+  if (login.hasPasswordInput || login.isLoginUrl || privacy.found || tos.found) {
     sendToBackground(analysis);
     console.log("[Service Policy Auditor] Page analyzed:", analysis);
   }
