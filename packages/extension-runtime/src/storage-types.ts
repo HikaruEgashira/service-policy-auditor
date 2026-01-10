@@ -8,6 +8,8 @@
 import type {
   DetectedService,
   EventLog,
+  CapturedAIPrompt,
+  AIMonitorConfig,
 } from "@service-policy-auditor/detectors";
 import type { CSPConfig, CSPReport } from "@service-policy-auditor/csp";
 
@@ -17,12 +19,23 @@ import type { CSPConfig, CSPReport } from "@service-policy-auditor/csp";
  * - events: 監査ログ
  * - cspReports: CSP違反・ネットワークリクエスト
  * - cspConfig: CSP収集設定
+ * - aiPrompts: AIプロンプト/レスポンス
+ * - aiMonitorConfig: AIモニタリング設定
  */
 export interface StorageData {
   services: Record<string, DetectedService>;
   events: EventLog[];
   cspReports?: CSPReport[];
   cspConfig?: CSPConfig;
+  aiPrompts?: CapturedAIPrompt[];
+  aiMonitorConfig?: AIMonitorConfig;
 }
 
-export type { DetectedService, EventLog, CSPConfig, CSPReport };
+export type {
+  DetectedService,
+  EventLog,
+  CSPConfig,
+  CSPReport,
+  CapturedAIPrompt,
+  AIMonitorConfig,
+};
