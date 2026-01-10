@@ -30,10 +30,10 @@ interface TabData {
 
 function getStatus(data: TabData) {
   const nrdCount = data.services.filter(s => s.nrdResult?.isNRD).length;
-  if (nrdCount > 0) return { variant: "danger" as const, label: "警告" };
-  if (data.violations.length > 10) return { variant: "warning" as const, label: "注意" };
-  if (data.aiPrompts.length > 0) return { variant: "info" as const, label: "監視" };
-  return { variant: "success" as const, label: "正常" };
+  if (nrdCount > 0) return { variant: "danger" as const, label: "警告", dot: false };
+  if (data.violations.length > 10) return { variant: "warning" as const, label: "注意", dot: false };
+  if (data.aiPrompts.length > 0) return { variant: "info" as const, label: "監視", dot: false };
+  return { variant: "success" as const, label: "正常", dot: true };
 }
 
 export function App() {
@@ -149,7 +149,7 @@ export function App() {
       <header style={styles.header}>
         <h1 style={styles.title}>
           CASB
-          <Badge variant={status.variant} size="sm">{status.label}</Badge>
+          <Badge variant={status.variant} size="sm" dot={status.dot}>{status.label}</Badge>
         </h1>
         <div style={{ display: "flex", gap: "8px" }}>
           <Button variant="secondary" size="sm" onClick={openDashboard}>

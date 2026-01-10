@@ -134,10 +134,10 @@ const periodOptions = [
 ];
 
 function getStatusBadge(nrdCount: number, violationCount: number, aiCount: number) {
-  if (nrdCount > 0) return { variant: "danger" as const, label: "要対応" };
-  if (violationCount > 50) return { variant: "warning" as const, label: "注意" };
-  if (aiCount > 0) return { variant: "info" as const, label: "監視中" };
-  return { variant: "success" as const, label: "正常" };
+  if (nrdCount > 0) return { variant: "danger" as const, label: "要対応", dot: false };
+  if (violationCount > 50) return { variant: "warning" as const, label: "注意", dot: false };
+  if (aiCount > 0) return { variant: "info" as const, label: "監視中", dot: false };
+  return { variant: "success" as const, label: "正常", dot: true };
 }
 
 function HorizontalBarChart({ data, title }: { data: { label: string; value: number }[]; title: string }) {
@@ -383,7 +383,7 @@ export function DashboardApp() {
           <div>
             <h1 style={styles.title}>
               CASB Dashboard
-              <Badge variant={status.variant} size="md">{status.label}</Badge>
+              <Badge variant={status.variant} size="md" dot={status.dot}>{status.label}</Badge>
             </h1>
             <p style={styles.subtitle}>
               更新: {new Date(lastUpdated).toLocaleString("ja-JP")} | 接続: {connectionMode}

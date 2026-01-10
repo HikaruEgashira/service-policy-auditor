@@ -3,9 +3,10 @@ import type { CSSProperties } from "preact/compat";
 type BadgeVariant = "default" | "success" | "warning" | "danger" | "info";
 
 interface BadgeProps {
-  children: preact.ComponentChildren;
+  children?: preact.ComponentChildren;
   variant?: BadgeVariant;
   size?: "sm" | "md";
+  dot?: boolean;
 }
 
 const variantStyles: Record<BadgeVariant, CSSProperties> = {
@@ -36,7 +37,30 @@ const variantStyles: Record<BadgeVariant, CSSProperties> = {
   },
 };
 
-export function Badge({ children, variant = "default", size = "sm" }: BadgeProps) {
+const dotColors: Record<BadgeVariant, string> = {
+  default: "#666",
+  success: "#22c55e",
+  warning: "#f59e0b",
+  danger: "#ef4444",
+  info: "#3b82f6",
+};
+
+export function Badge({ children, variant = "default", size = "sm", dot = false }: BadgeProps) {
+  if (dot) {
+    return (
+      <span
+        style={{
+          display: "inline-block",
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          background: dotColors[variant],
+        }}
+        title={typeof children === "string" ? children : undefined}
+      />
+    );
+  }
+
   const sizeStyles = size === "sm"
     ? { padding: "2px 8px", fontSize: "11px" }
     : { padding: "4px 12px", fontSize: "12px" };
