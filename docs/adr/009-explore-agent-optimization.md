@@ -29,40 +29,43 @@ Claude CodeのExplore Agentは`claude-haiku`モデルを使用し、コードベ
 
 **理由**: CLAUDE.mdは全てのAgent呼び出しでコンテキストに含まれる。肥大化はトークン消費とレイテンシ増加の原因。
 
-### 2. コード構造のベストプラクティス
+### 2. フォルダ構造の設計
 
-#### index.tsでのre-export
+**目的が明確な命名**
+```
+packages/
+  detectors/     # 何を検出するか明確
+  csp/           # Content Security Policy
+app/
+  extension/     # Chrome拡張
+    entrypoints/ # WXT規約に従う
+```
+
+**避けるべき命名**
+- `utils/`, `helpers/`, `common/` - 何でも入る曖昧なフォルダ
+- `core/` - 範囲が不明確になりがち
+
+### 3. ファイル粒度のガイドライン
+
+**1ファイル1責務**
+```
+# 良い例
+types.ts        # 型定義のみ
+patterns.ts     # 正規表現パターンのみ
+analyzer.ts     # CSPAnalyzerクラス
+
+# 悪い例
+index.ts        # 型定義 + ロジック + エクスポート全部
+```
+
+**index.tsの役割はre-exportのみ**
 ```typescript
-// 良い例: カテゴリコメント付きのre-export
 // Types
 export type { CSPViolation, NetworkRequest } from "./types.js";
 
 // Analyzer
 export { CSPAnalyzer } from "./analyzer.js";
 ```
-
-#### DRY原則の徹底
-```typescript
-// 悪い例: 同じマッピングロジックの重複
-return results[0].values.map((row) => {
-  const obj: Record<string, unknown> = {}
-  columns.forEach((col, i) => { obj[col] = row[i] })
-  return { type: 'csp-violation', ... }  // 4箇所で重複
-})
-
-// 良い例: ヘルパー関数に抽出
-function mapViolation(obj: Record<string, unknown>): CSPViolation { ... }
-return values.map((row) => mapViolation(rowToObject(columns, row)))
-```
-
-### 3. AI Slop回避チェックリスト
-
-新しいコードを書く際に確認:
-
-- [ ] 過剰なコメントがないか（人間が書かないようなコメント）
-- [ ] 不要な防御チェック/try-catchがないか
-- [ ] 同じロジックが複数箇所にないか（DRY違反）
-- [ ] ファイルの他の部分とスタイルが一貫しているか
 
 ### 4. Explore Agent呼び出しのコツ
 
@@ -80,6 +83,21 @@ return values.map((row) => mapViolation(rowToObject(columns, row)))
 "このプロジェクトの構造を教えてください"
 ```
 
+### 5. DRY原則の徹底
+
+```typescript
+// 悪い例: 同じマッピングロジックの重複
+return results[0].values.map((row) => {
+  const obj: Record<string, unknown> = {}
+  columns.forEach((col, i) => { obj[col] = row[i] })
+  return { type: 'csp-violation', ... }  // 4箇所で重複
+})
+
+// 良い例: ヘルパー関数に抽出
+function mapViolation(obj: Record<string, unknown>): CSPViolation { ... }
+return values.map((row) => mapViolation(rowToObject(columns, row)))
+```
+
 ## Consequences
 
 ### 効果測定結果
@@ -94,7 +112,3 @@ return values.map((row) => mapViolation(rowToObject(columns, row)))
 
 - Explore Agentの内部動作は変更不可（Claude Code本体に組み込み）
 - `SubagentStart`フックは未サポート（`SubagentStop`のみ利用可能）
-
-## 関連
-
-- [deslop skill](https://github.com/anthropics/claude-code-plugins) - AI生成コードの無駄を検出・削除
