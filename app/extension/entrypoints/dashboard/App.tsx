@@ -992,6 +992,38 @@ export function DashboardApp() {
     return () => clearInterval(interval);
   }, [loadData]);
 
+  // キーボードショートカット
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + 数字でタブ切り替え
+      if ((e.ctrlKey || e.metaKey) && e.key >= "1" && e.key <= "7") {
+        e.preventDefault();
+        const tabIndex = parseInt(e.key) - 1;
+        const tabIds: TabType[] = ["overview", "violations", "network", "domains", "ai", "services", "events"];
+        if (tabIds[tabIndex]) {
+          setActiveTab(tabIds[tabIndex]);
+        }
+      }
+      // R で更新
+      if (e.key === "r" && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement)) {
+        loadData();
+      }
+      // / で検索にフォーカス
+      if (e.key === "/" && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+        searchInput?.focus();
+      }
+      // Escape で検索クリア
+      if (e.key === "Escape") {
+        setSearchQuery("");
+        setDirectiveFilter("");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [loadData]);
+
   const handleClearData = async () => {
     if (!confirm("すべてのデータを削除しますか？")) return;
     try {
@@ -1111,11 +1143,34 @@ export function DashboardApp() {
     { id: "events", label: "イベント", count: events.length },
   ];
 
+  // セキュリティステータス判定
+  const getSecurityStatus = () => {
+    if (nrdServices.length > 0) return { level: "critical", label: "要対応", color: "hsl(0 70% 50%)" };
+    if (violations.length > 50) return { level: "warning", label: "注意", color: "hsl(45 100% 40%)" };
+    if (aiPrompts.length > 0) return { level: "info", label: "監視中", color: "hsl(210 100% 45%)" };
+    return { level: "ok", label: "正常", color: "hsl(120 50% 40%)" };
+  };
+  const securityStatus = getSecurityStatus();
+
   return (
     <div style={dashboardStyles.container}>
       <header style={dashboardStyles.header}>
         <div style={dashboardStyles.headerLeft}>
-          <h1 style={dashboardStyles.title}>CASB Dashboard</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <h1 style={dashboardStyles.title}>CASB Dashboard</h1>
+            <span
+              style={{
+                padding: "4px 12px",
+                borderRadius: "12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "white",
+                background: securityStatus.color,
+              }}
+            >
+              {securityStatus.label}
+            </span>
+          </div>
           <p style={dashboardStyles.subtitle}>
             Browser Security Monitor | 更新: {new Date(lastUpdated).toLocaleString("ja-JP")} |
             モード: {connectionMode}
