@@ -2,19 +2,19 @@ import type { CSSProperties } from "preact/compat";
 import { useTheme, type ThemeMode } from "../lib/theme";
 
 const styles: Record<string, CSSProperties> = {
-  container: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
   button: {
-    padding: "4px 8px",
+    width: "100%",
+    padding: "8px 12px",
     border: "none",
     borderRadius: "4px",
     background: "transparent",
-    fontSize: "12px",
+    fontSize: "13px",
     cursor: "pointer",
-    transition: "all 0.15s",
+    transition: "background-color 0.15s",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    textAlign: "left" as const,
   },
 };
 
@@ -41,15 +41,18 @@ export function ThemeToggle() {
       style={{
         ...styles.button,
         color: colors.textSecondary,
-        display: "flex",
-        alignItems: "center",
-        gap: "4px",
       }}
       onClick={() => setMode(nextMode)}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.bgSecondary;
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+      }}
       title={`テーマ: ${modeLabels[mode]} → ${modeLabels[nextMode]}`}
     >
-      {modeIcons[mode]}
-      <span style={{ fontSize: "12px" }}>{modeLabels[mode]}</span>
+      <span style={{ width: "16px", textAlign: "center" }}>{modeIcons[mode]}</span>
+      {modeLabels[mode]}
     </button>
   );
 }
