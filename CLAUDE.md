@@ -17,11 +17,22 @@ service-policy-auditor/
 └── docs/adr/           # Architecture Decision Records
 ```
 
+## 主要ファイルパス
+
+探索効率化のため、主要ファイルのパスを明示:
+
+| パッケージ | エントリーポイント | 型定義 |
+|-----------|-------------------|--------|
+| detectors | `packages/detectors/src/index.ts` | `packages/detectors/src/types.ts`, `packages/detectors/src/casb-types.ts` |
+| csp | `packages/csp/src/index.ts` | `packages/csp/src/types.ts` |
+| api | `packages/api/index.ts` | `packages/api/app.ts` |
+| extension | `app/extension/entrypoints/background.ts` | `app/extension/entrypoints/popup/App.tsx` |
+
 ## ドメインアーキテクチャ
 
 このプロジェクトは2つのドメインで構成されています（ADR 008参照）:
 
-### 1. CASBドメイン (`@service-policy-auditor/detectors`)
+### 1. CASBドメイン (`packages/detectors/src/`)
 
 Cloud Access Security Brokerの機能を担う。
 
@@ -32,7 +43,7 @@ Cloud Access Security Brokerの機能を担う。
 | ポリシー検出 | `patterns.ts` | PRIVACY_*, TOS_*（コンプライアンス監視） |
 | イベントログ | `casb-types.ts` | EventLog（監査ログ） |
 
-### 2. ブラウザセキュリティドメイン (`@service-policy-auditor/csp`)
+### 2. ブラウザセキュリティドメイン (`packages/csp/src/`)
 
 CSP（Content Security Policy）監査機能を担う。**SASEやCASBの概念には含まれない**独立したドメイン。
 
