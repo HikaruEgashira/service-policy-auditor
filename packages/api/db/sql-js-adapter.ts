@@ -41,6 +41,44 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_requests_domain ON network_requests(domain);
 `
 
+type SqlRow = (string | number | null)[]
+
+function rowToObject(columns: string[], row: SqlRow): Record<string, unknown> {
+  const obj: Record<string, unknown> = {}
+  columns.forEach((col, i) => { obj[col] = row[i] })
+  return obj
+}
+
+function mapViolation(obj: Record<string, unknown>): CSPViolation {
+  return {
+    type: 'csp-violation',
+    timestamp: obj.timestamp as string,
+    pageUrl: obj.page_url as string,
+    directive: obj.directive as string,
+    blockedURL: obj.blocked_url as string,
+    domain: obj.domain as string,
+    disposition: obj.disposition as 'enforce' | 'report',
+    originalPolicy: obj.original_policy as string | undefined,
+    sourceFile: obj.source_file as string | undefined,
+    lineNumber: obj.line_number as number | undefined,
+    columnNumber: obj.column_number as number | undefined,
+    statusCode: obj.status_code as number | undefined,
+  }
+}
+
+function mapNetworkRequest(obj: Record<string, unknown>): NetworkRequest {
+  return {
+    type: 'network-request',
+    timestamp: obj.timestamp as string,
+    pageUrl: obj.page_url as string,
+    url: obj.url as string,
+    method: obj.method as string,
+    initiator: obj.initiator as NetworkRequest['initiator'],
+    domain: obj.domain as string,
+    resourceType: obj.resource_type as string | undefined,
+  }
+}
+
 export class SqlJsAdapter implements DatabaseAdapter {
   private db: Database | null = null
   private SQL: SqlJsStatic
@@ -117,48 +155,16 @@ export class SqlJsAdapter implements DatabaseAdapter {
     const db = this.getDb()
     const results = db.exec('SELECT * FROM csp_violations ORDER BY timestamp DESC')
     if (results.length === 0) return []
-
-    const columns = results[0].columns
-    return results[0].values.map((row) => {
-      const obj: Record<string, unknown> = {}
-      columns.forEach((col, i) => { obj[col] = row[i] })
-      return {
-        type: 'csp-violation' as const,
-        timestamp: obj.timestamp as string,
-        pageUrl: obj.page_url as string,
-        directive: obj.directive as string,
-        blockedURL: obj.blocked_url as string,
-        domain: obj.domain as string,
-        disposition: obj.disposition as 'enforce' | 'report',
-        originalPolicy: obj.original_policy as string | undefined,
-        sourceFile: obj.source_file as string | undefined,
-        lineNumber: obj.line_number as number | undefined,
-        columnNumber: obj.column_number as number | undefined,
-        statusCode: obj.status_code as number | undefined,
-      }
-    })
+    const { columns, values } = results[0]
+    return values.map((row) => mapViolation(rowToObject(columns, row)))
   }
 
   async getAllNetworkRequests(): Promise<NetworkRequest[]> {
     const db = this.getDb()
     const results = db.exec('SELECT * FROM network_requests ORDER BY timestamp DESC')
     if (results.length === 0) return []
-
-    const columns = results[0].columns
-    return results[0].values.map((row) => {
-      const obj: Record<string, unknown> = {}
-      columns.forEach((col, i) => { obj[col] = row[i] })
-      return {
-        type: 'network-request' as const,
-        timestamp: obj.timestamp as string,
-        pageUrl: obj.page_url as string,
-        url: obj.url as string,
-        method: obj.method as string,
-        initiator: obj.initiator as NetworkRequest['initiator'],
-        domain: obj.domain as string,
-        resourceType: obj.resource_type as string | undefined,
-      }
-    })
+    const { columns, values } = results[0]
+    return values.map((row) => mapNetworkRequest(rowToObject(columns, row)))
   }
 
   async getAllReports(): Promise<CSPReport[]> {
@@ -205,7 +211,6 @@ export class SqlJsAdapter implements DatabaseAdapter {
 
   async getReportsSince(timestamp: string): Promise<CSPReport[]> {
     const db = this.getDb()
-
     const vResults = db.exec(
       'SELECT * FROM csp_violations WHERE timestamp > ? ORDER BY timestamp ASC',
       [timestamp]
@@ -215,44 +220,11 @@ export class SqlJsAdapter implements DatabaseAdapter {
       [timestamp]
     )
 
-    const violations: CSPViolation[] = vResults.length > 0
-      ? vResults[0].values.map((row) => {
-          const columns = vResults[0].columns
-          const obj: Record<string, unknown> = {}
-          columns.forEach((col, i) => { obj[col] = row[i] })
-          return {
-            type: 'csp-violation' as const,
-            timestamp: obj.timestamp as string,
-            pageUrl: obj.page_url as string,
-            directive: obj.directive as string,
-            blockedURL: obj.blocked_url as string,
-            domain: obj.domain as string,
-            disposition: obj.disposition as 'enforce' | 'report',
-            originalPolicy: obj.original_policy as string | undefined,
-            sourceFile: obj.source_file as string | undefined,
-            lineNumber: obj.line_number as number | undefined,
-            columnNumber: obj.column_number as number | undefined,
-            statusCode: obj.status_code as number | undefined,
-          }
-        })
+    const violations = vResults.length > 0
+      ? vResults[0].values.map((row) => mapViolation(rowToObject(vResults[0].columns, row)))
       : []
-
-    const requests: NetworkRequest[] = rResults.length > 0
-      ? rResults[0].values.map((row) => {
-          const columns = rResults[0].columns
-          const obj: Record<string, unknown> = {}
-          columns.forEach((col, i) => { obj[col] = row[i] })
-          return {
-            type: 'network-request' as const,
-            timestamp: obj.timestamp as string,
-            pageUrl: obj.page_url as string,
-            url: obj.url as string,
-            method: obj.method as string,
-            initiator: obj.initiator as NetworkRequest['initiator'],
-            domain: obj.domain as string,
-            resourceType: obj.resource_type as string | undefined,
-          }
-        })
+    const requests = rResults.length > 0
+      ? rResults[0].values.map((row) => mapNetworkRequest(rowToObject(rResults[0].columns, row)))
       : []
 
     return [...violations, ...requests].sort(
