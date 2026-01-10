@@ -22,9 +22,9 @@ Browserを通してアクセスするWebサービスの利用状況を可視化�
 
 ### Popup
 
-| Domains | Requests | Sessions |
-|---------|----------|----------|
-| ![Domains](./docs/assets/popup-domains.png) | ![Requests](./docs/assets/popup-requests.png) | ![Sessions](./docs/assets/popup-sessions.png) |
+| Sessions | Domains | Requests |
+|----------|---------|----------|
+| ![Sessions](./docs/assets/popup-sessions.png) | ![Domains](./docs/assets/popup-domains.png) | ![Requests](./docs/assets/popup-requests.png) |
 
 ## Documentation
 
