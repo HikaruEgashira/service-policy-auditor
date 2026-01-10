@@ -1,5 +1,6 @@
 import { detectLoginPage, isLoginPage } from "@/utils/login-detector";
 import { findPrivacyPolicy } from "@/utils/privacy-finder";
+import { findTermsOfService } from "@/utils/tos-finder";
 
 interface PageAnalysis {
   url: string;
@@ -7,6 +8,7 @@ interface PageAnalysis {
   timestamp: number;
   login: ReturnType<typeof detectLoginPage>;
   privacy: ReturnType<typeof findPrivacyPolicy>;
+  tos: ReturnType<typeof findTermsOfService>;
 }
 
 function analyzePage(): PageAnalysis {
@@ -19,6 +21,7 @@ function analyzePage(): PageAnalysis {
     timestamp: Date.now(),
     login: detectLoginPage(),
     privacy: findPrivacyPolicy(),
+    tos: findTermsOfService(),
   };
 }
 
@@ -36,7 +39,7 @@ async function sendToBackground(analysis: PageAnalysis) {
 function runAnalysis() {
   const analysis = analyzePage();
 
-  if (isLoginPage() || analysis.privacy.found) {
+  if (isLoginPage() || analysis.privacy.found || analysis.tos.found) {
     sendToBackground(analysis);
     console.log("[Service Policy Auditor] Page analyzed:", analysis);
   }

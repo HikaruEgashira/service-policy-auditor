@@ -57,8 +57,9 @@ function ServiceRow({ service }: { service: DetectedService }) {
   const tags: string[] = [];
   if (service.hasLoginPage) tags.push("login");
   if (service.privacyPolicyUrl) tags.push("privacy");
+  if (service.termsOfServiceUrl) tags.push("tos");
 
-  const url = sanitizeUrl(service.privacyPolicyUrl, service.domain);
+  const url = sanitizeUrl(service.privacyPolicyUrl || service.termsOfServiceUrl, service.domain);
 
   return (
     <tr style={styles.tableRow}>
