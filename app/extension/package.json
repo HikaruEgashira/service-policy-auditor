@@ -7,9 +7,12 @@
     "build": "wxt build"
   },
   "dependencies": {
+    "@service-policy-auditor/api": "workspace:*",
     "@service-policy-auditor/detectors": "workspace:*",
     "@service-policy-auditor/csp": "workspace:*",
-    "preact": "^10.28.2"
+    "hono": "^4.7.0",
+    "preact": "^10.28.2",
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.2",

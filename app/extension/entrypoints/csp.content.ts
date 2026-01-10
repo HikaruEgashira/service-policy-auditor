@@ -41,9 +41,6 @@ export default defineContentScript({
       true
     );
 
-    // Inject main world script for API hooking
-    injectMainWorldScript();
-
     // Listen for network events from main world
     window.addEventListener(
       "__SERVICE_DETECTION_NETWORK__",
@@ -75,15 +72,6 @@ export default defineContentScript({
     );
   },
 });
-
-function injectMainWorldScript() {
-  const script = document.createElement("script");
-  script.src = chrome.runtime.getURL("/api-hooks.js");
-  script.onload = () => {
-    script.remove();
-  };
-  (document.head || document.documentElement).appendChild(script);
-}
 
 function extractDomain(url: string): string {
   try {
