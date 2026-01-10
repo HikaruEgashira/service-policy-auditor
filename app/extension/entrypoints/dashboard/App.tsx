@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback } from "preact/hooks";
+import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
 import type {
   CSPViolation,
   NetworkRequest,
   CSPReport,
-} from "@service-policy-auditor/core";
-import { dashboardStyles } from "./styles";
+} from "@service-policy-auditor/csp";
+import type {
+  CapturedAIPrompt,
+  DetectedService,
+  EventLog,
+} from "@service-policy-auditor/detectors";
+import { Badge, Button, Card, DataTable, SearchInput, Select, StatCard, Tabs } from "../../components";
 
 interface Stats {
   violations: number;
@@ -12,189 +17,217 @@ interface Stats {
   uniqueDomains: number;
 }
 
+type Period = "1h" | "24h" | "7d" | "30d" | "all";
+type TabType = "overview" | "violations" | "network" | "domains" | "ai" | "services" | "events";
+
 function truncate(str: string, len: number): string {
   return str && str.length > len ? str.substring(0, len) + "..." : str || "";
 }
 
-function StatCard({ value, label }: { value: number; label: string }) {
-  return (
-    <div style={dashboardStyles.statCard}>
-      <div style={dashboardStyles.statValue}>{value}</div>
-      <div style={dashboardStyles.statLabel}>{label}</div>
-    </div>
-  );
+function getPeriodMs(period: Period): number {
+  switch (period) {
+    case "1h": return 60 * 60 * 1000;
+    case "24h": return 24 * 60 * 60 * 1000;
+    case "7d": return 7 * 24 * 60 * 60 * 1000;
+    case "30d": return 30 * 24 * 60 * 60 * 1000;
+    default: return Number.MAX_SAFE_INTEGER;
+  }
 }
 
-function ViolationsTable({ violations }: { violations: CSPViolation[] }) {
-  if (violations.length === 0) {
-    return <p style={dashboardStyles.empty}>No CSP violations recorded</p>;
-  }
+const styles = {
+  container: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "24px",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif",
+    color: "#111",
+    background: "#fafafa",
+    minHeight: "100vh",
+  },
+  header: {
+    marginBottom: "32px",
+  },
+  headerTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px",
+  },
+  title: {
+    fontSize: "20px",
+    fontWeight: 600,
+    margin: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  subtitle: {
+    color: "#666",
+    fontSize: "13px",
+    marginTop: "4px",
+  },
+  controls: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "12px",
+    marginBottom: "24px",
+  },
+  filterBar: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+    marginBottom: "16px",
+    flexWrap: "wrap" as const,
+  },
+  section: {
+    marginBottom: "32px",
+  },
+  twoColumn: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
+    marginBottom: "24px",
+  },
+  chartContainer: {
+    height: "200px",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "6px",
+  },
+  chartBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  chartLabel: {
+    fontSize: "12px",
+    color: "#666",
+    width: "100px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+  },
+  chartBarInner: {
+    height: "20px",
+    background: "#000",
+    borderRadius: "4px",
+    minWidth: "4px",
+  },
+  chartValue: {
+    fontSize: "12px",
+    color: "#666",
+    minWidth: "40px",
+  },
+};
+
+const periodOptions = [
+  { value: "1h", label: "1時間" },
+  { value: "24h", label: "24時間" },
+  { value: "7d", label: "7日" },
+  { value: "30d", label: "30日" },
+  { value: "all", label: "全期間" },
+];
+
+function getStatusBadge(nrdCount: number, violationCount: number, aiCount: number) {
+  if (nrdCount > 0) return { variant: "danger" as const, label: "要対応", dot: false };
+  if (violationCount > 50) return { variant: "warning" as const, label: "注意", dot: false };
+  if (aiCount > 0) return { variant: "info" as const, label: "監視中", dot: false };
+  return { variant: "success" as const, label: "正常", dot: true };
+}
+
+function HorizontalBarChart({ data, title }: { data: { label: string; value: number }[]; title: string }) {
+  const maxValue = Math.max(...data.map((d) => d.value), 1);
+  const displayData = data.slice(0, 8);
+
   return (
-    <div style={dashboardStyles.card}>
-      <table style={dashboardStyles.table}>
-        <thead>
-          <tr>
-            <th style={dashboardStyles.th}>Time</th>
-            <th style={dashboardStyles.th}>Page</th>
-            <th style={dashboardStyles.th}>Directive</th>
-            <th style={dashboardStyles.th}>Blocked URL</th>
-          </tr>
-        </thead>
-        <tbody>
-          {violations.slice(0, 50).map((v, i) => (
-            <tr key={i} style={dashboardStyles.tr}>
-              <td style={dashboardStyles.td}>
-                {new Date(v.timestamp).toLocaleTimeString()}
-              </td>
-              <td style={dashboardStyles.tdUrl}>{truncate(v.pageUrl, 40)}</td>
-              <td style={dashboardStyles.td}>
-                <code style={dashboardStyles.code}>{v.directive}</code>
-              </td>
-              <td style={dashboardStyles.tdUrl}>
-                {truncate(v.blockedURL, 40)}
-              </td>
-            </tr>
+    <Card title={title}>
+      {displayData.length === 0 ? (
+        <p style={{ color: "#999", textAlign: "center", padding: "24px" }}>データなし</p>
+      ) : (
+        <div style={styles.chartContainer}>
+          {displayData.map((item, i) => (
+            <div key={i} style={styles.chartBar}>
+              <span style={styles.chartLabel} title={item.label}>{truncate(item.label, 15)}</span>
+              <div
+                style={{
+                  ...styles.chartBarInner,
+                  width: `${(item.value / maxValue) * 100}%`,
+                  maxWidth: "calc(100% - 160px)",
+                }}
+              />
+              <span style={styles.chartValue}>{item.value}</span>
+            </div>
           ))}
-        </tbody>
-      </table>
-      {violations.length > 50 && (
-        <p style={dashboardStyles.more}>
-          Showing latest 50 of {violations.length}
-        </p>
+        </div>
       )}
-    </div>
-  );
-}
-
-function NetworkTable({ requests }: { requests: NetworkRequest[] }) {
-  if (requests.length === 0) {
-    return <p style={dashboardStyles.empty}>No network requests recorded</p>;
-  }
-  return (
-    <div style={dashboardStyles.card}>
-      <table style={dashboardStyles.table}>
-        <thead>
-          <tr>
-            <th style={dashboardStyles.th}>Time</th>
-            <th style={dashboardStyles.th}>Type</th>
-            <th style={dashboardStyles.th}>Method</th>
-            <th style={dashboardStyles.th}>From</th>
-            <th style={dashboardStyles.th}>Domain</th>
-            <th style={dashboardStyles.th}>URL</th>
-          </tr>
-        </thead>
-        <tbody>
-          {requests.slice(0, 50).map((r, i) => (
-            <tr key={i} style={dashboardStyles.tr}>
-              <td style={dashboardStyles.td}>
-                {new Date(r.timestamp).toLocaleTimeString()}
-              </td>
-              <td style={dashboardStyles.td}>
-                <span style={dashboardStyles.badge}>{r.initiator}</span>
-              </td>
-              <td style={dashboardStyles.td}>
-                <code style={dashboardStyles.code}>{r.method || "GET"}</code>
-              </td>
-              <td style={dashboardStyles.tdUrl} title={r.pageUrl}>
-                {truncate(r.pageUrl, 30)}
-              </td>
-              <td style={dashboardStyles.td}>{r.domain}</td>
-              <td style={dashboardStyles.tdUrl}>{truncate(r.url, 40)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {requests.length > 50 && (
-        <p style={dashboardStyles.more}>
-          Showing latest 50 of {requests.length}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function StatsCard({
-  title,
-  data,
-  isDirective,
-}: {
-  title: string;
-  data: Record<string, number>;
-  isDirective?: boolean;
-}) {
-  const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0) {
-    return (
-      <div style={dashboardStyles.card}>
-        <h3 style={dashboardStyles.cardTitle}>{title}</h3>
-        <p style={dashboardStyles.empty}>No data</p>
-      </div>
-    );
-  }
-  return (
-    <div style={dashboardStyles.card}>
-      <h3 style={dashboardStyles.cardTitle}>{title}</h3>
-      <table style={dashboardStyles.table}>
-        <thead>
-          <tr>
-            <th style={dashboardStyles.th}>{title.replace("By ", "")}</th>
-            <th style={dashboardStyles.th}>Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map(([key, count]) => (
-            <tr key={key} style={dashboardStyles.tr}>
-              <td style={dashboardStyles.td}>
-                {isDirective ? (
-                  <code style={dashboardStyles.code}>{key}</code>
-                ) : (
-                  <span style={dashboardStyles.badge}>{key}</span>
-                )}
-              </td>
-              <td style={dashboardStyles.td}>{count}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    </Card>
   );
 }
 
 export function DashboardApp() {
   const [reports, setReports] = useState<CSPReport[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    violations: 0,
-    requests: 0,
-    uniqueDomains: 0,
-  });
+  const [, setStats] = useState<Stats>({ violations: 0, requests: 0, uniqueDomains: 0 });
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [connectionMode, setConnectionMode] = useState<"local" | "remote">(
-    "local"
-  );
+  const [connectionMode, setConnectionMode] = useState<"local" | "remote">("local");
+
+  const getInitialTab = (): TabType => {
+    const hash = window.location.hash.slice(1);
+    const validTabs: TabType[] = ["overview", "violations", "network", "domains", "ai", "services", "events"];
+    return validTabs.includes(hash as TabType) ? (hash as TabType) : "overview";
+  };
+
+  const [period, setPeriod] = useState<Period>("24h");
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [directiveFilter, setDirectiveFilter] = useState("");
+  const [aiPrompts, setAIPrompts] = useState<CapturedAIPrompt[]>([]);
+  const [services, setServices] = useState<DetectedService[]>([]);
+  const [events, setEvents] = useState<EventLog[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    window.location.hash = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1) as TabType;
+      const validTabs: TabType[] = ["overview", "violations", "network", "domains", "ai", "services", "events"];
+      if (validTabs.includes(hash)) setActiveTab(hash);
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   const loadData = useCallback(async () => {
+    setIsRefreshing(true);
     try {
-      const [reportsResult, statsResult, configResult] = await Promise.all([
+      const [reportsResult, statsResult, configResult, aiPromptsResult, storageResult] = await Promise.all([
         chrome.runtime.sendMessage({ type: "GET_CSP_REPORTS" }),
         chrome.runtime.sendMessage({ type: "GET_STATS" }),
         chrome.runtime.sendMessage({ type: "GET_CONNECTION_CONFIG" }),
+        chrome.runtime.sendMessage({ type: "GET_AI_PROMPTS" }),
+        chrome.storage.local.get(["services", "events"]),
       ]);
 
-      if (Array.isArray(reportsResult)) {
-        setReports(reportsResult);
-      }
-      if (statsResult) {
-        setStats(statsResult);
-      }
-      if (configResult) {
-        setConnectionMode(configResult.mode);
-      }
+      if (Array.isArray(reportsResult)) setReports(reportsResult);
+      if (statsResult) setStats(statsResult);
+      if (configResult) setConnectionMode(configResult.mode);
+      if (Array.isArray(aiPromptsResult)) setAIPrompts(aiPromptsResult);
+      if (storageResult.services) setServices(Object.values(storageResult.services));
+      if (storageResult.events) setEvents(storageResult.events);
       setLastUpdated(new Date().toISOString());
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -204,8 +237,30 @@ export function DashboardApp() {
     return () => clearInterval(interval);
   }, [loadData]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key >= "1" && e.key <= "7") {
+        e.preventDefault();
+        const tabIds: TabType[] = ["overview", "violations", "network", "domains", "ai", "services", "events"];
+        const idx = parseInt(e.key) - 1;
+        if (tabIds[idx]) setActiveTab(tabIds[idx]);
+      }
+      if (e.key === "r" && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement)) loadData();
+      if (e.key === "/" && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault();
+        (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus();
+      }
+      if (e.key === "Escape") {
+        setSearchQuery("");
+        setDirectiveFilter("");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [loadData]);
+
   const handleClearData = async () => {
-    if (!confirm("Clear all collected data?")) return;
+    if (!confirm("すべてのデータを削除しますか？")) return;
     try {
       await chrome.runtime.sendMessage({ type: "CLEAR_CSP_DATA" });
       await loadData();
@@ -214,97 +269,376 @@ export function DashboardApp() {
     }
   };
 
-  const handleExportData = () => {
-    const blob = new Blob([JSON.stringify({ reports, stats }, null, 2)], {
-      type: "application/json",
-    });
+  const handleExportJSON = () => {
+    const blob = new Blob([JSON.stringify({ reports, services, events, aiPrompts }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `service-exposure-${Date.now()}.json`;
+    a.download = `casb-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const violations = reports.filter(
-    (r) => r.type === "csp-violation"
-  ) as CSPViolation[];
-  const networkRequests = reports.filter(
-    (r) => r.type === "network-request"
-  ) as NetworkRequest[];
+  const filteredReports = useMemo(() => {
+    const cutoff = Date.now() - getPeriodMs(period);
+    return reports.filter((r) => r.timestamp >= cutoff);
+  }, [reports, period]);
 
-  const directiveStats: Record<string, number> = {};
-  for (const v of violations) {
-    const d = v.directive || "unknown";
-    directiveStats[d] = (directiveStats[d] ?? 0) + 1;
-  }
+  const violations = useMemo(
+    () => filteredReports.filter((r) => r.type === "csp-violation") as CSPViolation[],
+    [filteredReports]
+  );
 
-  const initiatorStats: Record<string, number> = {};
-  for (const r of networkRequests) {
-    const i = r.initiator || "unknown";
-    initiatorStats[i] = (initiatorStats[i] ?? 0) + 1;
-  }
+  const networkRequests = useMemo(
+    () => filteredReports.filter((r) => r.type === "network-request") as NetworkRequest[],
+    [filteredReports]
+  );
+
+  const directives = useMemo(() => Array.from(new Set(violations.map((v) => v.directive))).sort(), [violations]);
+
+  const directiveStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    for (const v of violations) stats[v.directive || "unknown"] = (stats[v.directive || "unknown"] ?? 0) + 1;
+    return Object.entries(stats).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  }, [violations]);
+
+  const domainStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    for (const v of violations) {
+      try {
+        const domain = new URL(v.blockedURL).hostname;
+        stats[domain] = (stats[domain] ?? 0) + 1;
+      } catch { /* invalid URL */ }
+    }
+    return Object.entries(stats).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  }, [violations]);
 
   if (loading) {
     return (
-      <div style={dashboardStyles.container}>
-        <p style={dashboardStyles.loading}>Loading...</p>
+      <div style={styles.container}>
+        <p style={{ textAlign: "center", padding: "48px", color: "#666" }}>読み込み中...</p>
       </div>
     );
   }
 
+  const nrdServices = services.filter((s) => s.nrdResult?.isNRD);
+  const loginServices = services.filter((s) => s.hasLoginPage);
+  const status = getStatusBadge(nrdServices.length, violations.length, aiPrompts.length);
+
+  const tabs = [
+    { id: "overview", label: "概要" },
+    { id: "violations", label: "CSP違反", count: violations.length },
+    { id: "network", label: "ネットワーク", count: networkRequests.length },
+    { id: "domains", label: "ドメイン" },
+    { id: "ai", label: "AI監視", count: aiPrompts.length },
+    { id: "services", label: "サービス", count: services.length },
+    { id: "events", label: "イベント", count: events.length },
+  ];
+
+  const filteredViolations = useMemo(() => {
+    return violations.filter((v) => {
+      if (directiveFilter && v.directive !== directiveFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return v.pageUrl.toLowerCase().includes(q) || v.blockedURL.toLowerCase().includes(q) || v.directive.toLowerCase().includes(q);
+      }
+      return true;
+    });
+  }, [violations, searchQuery, directiveFilter]);
+
+  const filteredNetworkRequests = useMemo(() => {
+    if (!searchQuery) return networkRequests;
+    const q = searchQuery.toLowerCase();
+    return networkRequests.filter((r) => r.url.toLowerCase().includes(q) || r.domain.toLowerCase().includes(q));
+  }, [networkRequests, searchQuery]);
+
+  const filteredAIPrompts = useMemo(() => {
+    if (!searchQuery) return aiPrompts;
+    const q = searchQuery.toLowerCase();
+    return aiPrompts.filter((p) =>
+      p.provider?.toLowerCase().includes(q) ||
+      p.model?.toLowerCase().includes(q) ||
+      p.apiEndpoint.toLowerCase().includes(q)
+    );
+  }, [aiPrompts, searchQuery]);
+
+  const filteredServices = useMemo(() => {
+    if (!searchQuery) return services;
+    const q = searchQuery.toLowerCase();
+    if (q === "nrd") return services.filter((s) => s.nrdResult?.isNRD);
+    if (q === "login") return services.filter((s) => s.hasLoginPage);
+    return services.filter((s) => s.domain.toLowerCase().includes(q));
+  }, [services, searchQuery]);
+
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery) return events;
+    const q = searchQuery.toLowerCase();
+    return events.filter((e) => e.type.toLowerCase().includes(q) || e.domain.toLowerCase().includes(q));
+  }, [events, searchQuery]);
+
   return (
-    <div style={dashboardStyles.container}>
-      <header style={dashboardStyles.header}>
-        <h1 style={dashboardStyles.title}>Service Policy Auditor Dashboard</h1>
-        <p style={dashboardStyles.subtitle}>
-          Last updated: {new Date(lastUpdated).toLocaleString()} | Mode:{" "}
-          {connectionMode}
-        </p>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <div style={styles.headerTop}>
+          <div>
+            <h1 style={styles.title}>
+              CASB Dashboard
+              <Badge variant={status.variant} size="md" dot={status.dot}>{status.label}</Badge>
+            </h1>
+            <p style={styles.subtitle}>
+              更新: {new Date(lastUpdated).toLocaleString("ja-JP")} | 接続: {connectionMode}
+            </p>
+          </div>
+          <div style={styles.controls}>
+            <Select
+              value={period}
+              onChange={(v) => setPeriod(v as Period)}
+              options={periodOptions}
+            />
+            <Button onClick={() => loadData()} disabled={isRefreshing}>
+              {isRefreshing ? "更新中..." : "更新"}
+            </Button>
+            <Button variant="ghost" onClick={handleExportJSON}>エクスポート</Button>
+            <Button variant="ghost" onClick={handleClearData}>削除</Button>
+          </div>
+        </div>
+
+        <div style={styles.statsGrid}>
+          <StatCard value={violations.length} label="CSP違反" onClick={() => setActiveTab("violations")} />
+          <StatCard value={nrdServices.length} label="NRD検出" trend={nrdServices.length > 0 ? { value: nrdServices.length, isUp: true } : undefined} onClick={() => { setActiveTab("services"); setSearchQuery("nrd"); }} />
+          <StatCard value={aiPrompts.length} label="AIプロンプト" onClick={() => setActiveTab("ai")} />
+          <StatCard value={services.length} label="サービス" onClick={() => setActiveTab("services")} />
+          <StatCard value={loginServices.length} label="ログイン検出" onClick={() => { setActiveTab("services"); setSearchQuery("login"); }} />
+          <StatCard value={events.length} label="イベント" onClick={() => setActiveTab("events")} />
+        </div>
       </header>
 
-      <div style={dashboardStyles.statsGrid}>
-        <StatCard value={reports.length} label="Total Events" />
-        <StatCard value={violations.length} label="CSP Violations" />
-        <StatCard value={networkRequests.length} label="Network Requests" />
-        <StatCard value={stats.uniqueDomains} label="Unique Domains" />
-      </div>
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as TabType)} />
 
-      <div style={dashboardStyles.actions}>
-        <button style={dashboardStyles.btn} onClick={() => loadData()}>
-          Refresh
-        </button>
-        <button style={dashboardStyles.btnSecondary} onClick={handleClearData}>
-          Clear All Data
-        </button>
-        <button
-          style={dashboardStyles.btnSecondary}
-          onClick={handleExportData}
-        >
-          Export JSON
-        </button>
-        <span style={dashboardStyles.refreshNote}>
-          Auto-refreshes every 5 seconds
-        </span>
-      </div>
+      {activeTab === "overview" && (
+        <>
+          <div style={styles.twoColumn}>
+            <HorizontalBarChart data={directiveStats} title="Directive別違反数" />
+            <HorizontalBarChart data={domainStats} title="ドメイン別違反数" />
+          </div>
 
-      <section style={dashboardStyles.section}>
-        <h2 style={dashboardStyles.sectionTitle}>CSP Violations</h2>
-        <ViolationsTable violations={violations} />
-      </section>
+          <Card title="最近のイベント">
+            {events.slice(0, 10).length === 0 ? (
+              <p style={{ color: "#999", textAlign: "center", padding: "24px" }}>イベントなし</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {events.slice(0, 10).map((e) => (
+                  <div
+                    key={e.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "10px 12px",
+                      background: "#fafafa",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", color: "#666", minWidth: "70px" }}>
+                      {new Date(e.timestamp).toLocaleTimeString("ja-JP")}
+                    </span>
+                    <Badge
+                      variant={
+                        e.type.includes("violation") || e.type.includes("nrd")
+                          ? "danger"
+                          : e.type.includes("ai") || e.type.includes("login")
+                            ? "warning"
+                            : "default"
+                      }
+                    >
+                      {e.type}
+                    </Badge>
+                    <code style={{ fontSize: "12px", fontFamily: "monospace", flex: 1 }}>{e.domain}</code>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
 
-      <section style={dashboardStyles.section}>
-        <h2 style={dashboardStyles.sectionTitle}>Network Requests</h2>
-        <NetworkTable requests={networkRequests} />
-      </section>
-
-      <section style={dashboardStyles.section}>
-        <h2 style={dashboardStyles.sectionTitle}>Statistics</h2>
-        <div style={dashboardStyles.statsColumns}>
-          <StatsCard title="By Directive" data={directiveStats} isDirective />
-          <StatsCard title="By Initiator" data={initiatorStats} />
+      {activeTab === "violations" && (
+        <div style={styles.section}>
+          <div style={styles.filterBar}>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="URL、ドメインで検索..." />
+            <Select
+              value={directiveFilter}
+              onChange={setDirectiveFilter}
+              options={directives.map((d) => ({ value: d, label: d }))}
+              placeholder="Directive"
+            />
+          </div>
+          <DataTable
+            data={filteredViolations}
+            rowKey={(v, i) => `${v.timestamp}-${i}`}
+            rowHighlight={(v) => ["script-src", "default-src"].includes(v.directive)}
+            emptyMessage="CSP違反は記録されていません"
+            columns={[
+              { key: "timestamp", header: "日時", width: "160px", render: (v) => new Date(v.timestamp).toLocaleString("ja-JP") },
+              { key: "page", header: "ページ", render: (v) => <span title={v.pageUrl}>{truncate(v.pageUrl, 40)}</span> },
+              { key: "directive", header: "Directive", width: "120px", render: (v) => <Badge variant={["script-src", "default-src"].includes(v.directive) ? "danger" : "default"}>{v.directive}</Badge> },
+              { key: "blocked", header: "ブロックURL", render: (v) => <span title={v.blockedURL}>{truncate(v.blockedURL, 40)}</span> },
+            ]}
+          />
         </div>
-      </section>
+      )}
+
+      {activeTab === "network" && (
+        <div style={styles.section}>
+          <div style={styles.filterBar}>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="URL、ドメインで検索..." />
+          </div>
+          <DataTable
+            data={filteredNetworkRequests}
+            rowKey={(r, i) => `${r.timestamp}-${i}`}
+            emptyMessage="ネットワークリクエストは記録されていません"
+            columns={[
+              { key: "timestamp", header: "日時", width: "160px", render: (r) => new Date(r.timestamp).toLocaleString("ja-JP") },
+              { key: "initiator", header: "Type", width: "80px", render: (r) => <Badge>{r.initiator}</Badge> },
+              { key: "method", header: "Method", width: "80px", render: (r) => <code style={{ fontSize: "11px" }}>{r.method || "GET"}</code> },
+              { key: "domain", header: "ドメイン", width: "160px", render: (r) => r.domain },
+              { key: "url", header: "URL", render: (r) => <span title={r.url}>{truncate(r.url, 50)}</span> },
+            ]}
+          />
+        </div>
+      )}
+
+      {activeTab === "domains" && (
+        <div style={styles.section}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+            <Button
+              onClick={async () => {
+                try {
+                  const policy = await chrome.runtime.sendMessage({ type: "GENERATE_CSP" });
+                  if (policy?.policyString) {
+                    const blob = new Blob([policy.policyString], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `csp-policy-${new Date().toISOString().slice(0, 10)}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }
+                } catch (e) {
+                  console.error("CSP生成エラー:", e);
+                }
+              }}
+            >
+              CSPポリシー生成
+            </Button>
+          </div>
+
+          <DataTable
+            data={domainStats.map((d, i) => ({
+              ...d,
+              requests: networkRequests.filter((r) => r.domain === d.label).length,
+              lastSeen: Math.max(
+                ...violations.filter((v) => { try { return new URL(v.blockedURL).hostname === d.label; } catch { return false; } }).map((v) => v.timestamp),
+                0
+              ),
+              index: i,
+            }))}
+            rowKey={(d) => d.label}
+            rowHighlight={(d) => d.value > 10}
+            emptyMessage="ドメインデータなし"
+            columns={[
+              { key: "domain", header: "ドメイン", render: (d) => <code style={{ fontSize: "12px" }}>{d.label}</code> },
+              { key: "violations", header: "違反数", width: "100px", render: (d) => d.value > 0 ? <Badge variant="danger">{d.value}</Badge> : "-" },
+              { key: "requests", header: "リクエスト数", width: "120px", render: (d) => d.requests },
+              { key: "lastSeen", header: "最終検出", width: "160px", render: (d) => d.lastSeen ? new Date(d.lastSeen).toLocaleString("ja-JP") : "-" },
+            ]}
+          />
+        </div>
+      )}
+
+      {activeTab === "ai" && (
+        <div style={styles.section}>
+          <div style={styles.filterBar}>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="Provider、Model、エンドポイントで検索..." />
+          </div>
+          <DataTable
+            data={filteredAIPrompts}
+            rowKey={(p) => p.id}
+            emptyMessage="AIプロンプトは記録されていません"
+            columns={[
+              { key: "timestamp", header: "日時", width: "160px", render: (p) => new Date(p.timestamp).toLocaleString("ja-JP") },
+              { key: "provider", header: "Provider", width: "100px", render: (p) => <Badge>{p.provider || "unknown"}</Badge> },
+              { key: "model", header: "Model", width: "120px", render: (p) => <code style={{ fontSize: "11px" }}>{p.model || "-"}</code> },
+              { key: "prompt", header: "プロンプト", render: (p) => truncate(p.prompt.messages?.[0]?.content || p.prompt.text || "", 50) },
+              { key: "latency", header: "レスポンス", width: "100px", render: (p) => p.response ? <Badge>{p.response.latencyMs}ms</Badge> : "-" },
+            ]}
+          />
+        </div>
+      )}
+
+      {activeTab === "services" && (
+        <div style={styles.section}>
+          <div style={styles.filterBar}>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="ドメインで検索..." />
+            <Button variant={searchQuery === "nrd" ? "primary" : "secondary"} size="sm" onClick={() => setSearchQuery(searchQuery === "nrd" ? "" : "nrd")}>
+              NRD ({nrdServices.length})
+            </Button>
+            <Button variant={searchQuery === "login" ? "primary" : "secondary"} size="sm" onClick={() => setSearchQuery(searchQuery === "login" ? "" : "login")}>
+              ログイン ({loginServices.length})
+            </Button>
+          </div>
+          <DataTable
+            data={filteredServices}
+            rowKey={(s) => s.domain}
+            rowHighlight={(s) => s.nrdResult?.isNRD === true}
+            emptyMessage="検出されたサービスはありません"
+            columns={[
+              { key: "domain", header: "ドメイン", render: (s) => <code style={{ fontSize: "12px" }}>{s.domain}</code> },
+              { key: "login", header: "ログイン", width: "80px", render: (s) => s.hasLoginPage ? <Badge variant="warning">検出</Badge> : "-" },
+              { key: "privacy", header: "プライバシーポリシー", width: "160px", render: (s) => s.privacyPolicyUrl ? <a href={s.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#0070f3", fontSize: "12px" }}>{truncate(s.privacyPolicyUrl, 25)}</a> : "-" },
+              { key: "tos", header: "利用規約", width: "140px", render: (s) => s.termsOfServiceUrl ? <a href={s.termsOfServiceUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#0070f3", fontSize: "12px" }}>{truncate(s.termsOfServiceUrl, 20)}</a> : "-" },
+              { key: "nrd", header: "NRD", width: "100px", render: (s) => s.nrdResult?.isNRD ? <Badge variant="danger">NRD</Badge> : "-" },
+              { key: "detected", header: "検出日時", width: "140px", render: (s) => new Date(s.detectedAt).toLocaleDateString("ja-JP") },
+            ]}
+          />
+        </div>
+      )}
+
+      {activeTab === "events" && (
+        <div style={styles.section}>
+          <div style={styles.filterBar}>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="イベントタイプ、ドメインで検索..." />
+            <Select
+              value={searchQuery}
+              onChange={setSearchQuery}
+              options={[
+                { value: "csp_violation", label: "CSP違反" },
+                { value: "login_detected", label: "ログイン検出" },
+                { value: "ai_prompt_sent", label: "AIプロンプト" },
+                { value: "nrd_detected", label: "NRD検出" },
+              ]}
+              placeholder="タイプ"
+            />
+          </div>
+          <DataTable
+            data={filteredEvents}
+            rowKey={(e) => e.id}
+            emptyMessage="イベントは記録されていません"
+            columns={[
+              { key: "timestamp", header: "日時", width: "160px", render: (e) => new Date(e.timestamp).toLocaleString("ja-JP") },
+              { key: "type", header: "タイプ", width: "140px", render: (e) => <Badge variant={e.type.includes("violation") || e.type.includes("nrd") ? "danger" : e.type.includes("ai") || e.type.includes("login") ? "warning" : "default"}>{e.type}</Badge> },
+              { key: "domain", header: "ドメイン", width: "200px", render: (e) => <code style={{ fontSize: "12px" }}>{e.domain}</code> },
+              { key: "details", header: "詳細", render: (e) => {
+                const d = e.details as Record<string, unknown>;
+                if (!d) return "-";
+                if (e.type === "csp_violation") return `${d.directive}: ${truncate(String(d.blockedURL || ""), 30)}`;
+                if (e.type === "ai_prompt_sent") return `${d.provider}/${d.model}`;
+                return JSON.stringify(d).substring(0, 50);
+              }},
+            ]}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { defineConfig } from "wxt";
 export default defineConfig({
   srcDir: ".",
   outDir: "dist",
+  imports: false,
   manifest: {
     name: "Service Policy Auditor",
     version: "0.0.1",
