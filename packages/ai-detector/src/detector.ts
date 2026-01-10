@@ -5,7 +5,7 @@ import type {
   InferredProvider,
   AIPromptContent,
   AIResponseContent,
-} from "./ai-types.js";
+} from "./types.js";
 
 const TRUNCATE_SIZE = 10000; // 10KB
 

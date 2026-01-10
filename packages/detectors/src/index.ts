@@ -91,7 +91,7 @@ export { createPrivacyFinder } from "./privacy-finder.js";
 export { createTosFinder } from "./tos-finder.js";
 export { createLoginDetector } from "./login-detector.js";
 
-// AI Prompt Detection Types
+// AI Prompt Detection (re-export from @service-policy-auditor/ai-detector)
 export type {
   InferredProvider,
   AIDetectionMethod,
@@ -101,18 +101,16 @@ export type {
   AIPromptSentDetails,
   AIResponseReceivedDetails,
   AIMonitorConfig,
-} from "./ai-types.js";
+} from "@service-policy-auditor/ai-detector";
 
-export { DEFAULT_AI_MONITOR_CONFIG } from "./ai-types.js";
-
-// AI Prompt Detection
 export {
+  DEFAULT_AI_MONITOR_CONFIG,
   isAIRequestBody,
   extractPromptContent,
   extractModel,
   extractResponseContent,
   inferProviderFromResponse,
-} from "./ai-detector.js";
+} from "@service-policy-auditor/ai-detector";
 
 // Typosquatting Detection (re-export from @service-policy-auditor/typosquat)
 export type {
