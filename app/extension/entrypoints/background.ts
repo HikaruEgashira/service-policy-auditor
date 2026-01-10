@@ -1,7 +1,6 @@
 import type {
   DetectedService,
   EventLog,
-  StorageData,
   CookieInfo,
   LoginDetectedDetails,
   PrivacyPolicyFoundDetails,
@@ -21,44 +20,20 @@ import { CSPAnalyzer, type GeneratedCSPByDomain } from "@service-policy-auditor/
 import { startCookieMonitor, onCookieChange } from "@/utils/cookie-monitor";
 import { CSPReporter } from "@/utils/csp-reporter";
 import { createMessageRouter, fireAndForget } from "@/utils/message-handler";
+import {
+  queueStorageOperation,
+  getStorage,
+  setStorage,
+  getServiceCount,
+  clearCSPReports,
+} from "@/utils/storage";
 
 const MAX_EVENTS = 1000;
 const DEV_REPORT_ENDPOINT = "http://localhost:3001/api/v1/reports";
 
-let storageQueue: Promise<void> = Promise.resolve();
-
-function queueStorageOperation<T>(operation: () => Promise<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    storageQueue = storageQueue
-      .then(() => operation())
-      .then(resolve)
-      .catch(reject);
-  });
-}
-
-async function initStorage(): Promise<StorageData> {
-  const result = await chrome.storage.local.get([
-    "services",
-    "events",
-    "cspReports",
-    "cspConfig",
-  ]);
-  return {
-    services: result.services || {},
-    events: result.events || [],
-    cspReports: result.cspReports || [],
-    cspConfig: result.cspConfig || DEFAULT_CSP_CONFIG,
-  };
-}
-
-async function saveStorage(data: Partial<StorageData>) {
-  await chrome.storage.local.set(data);
-}
-
 async function updateBadge() {
   try {
-    const result = await chrome.storage.local.get(["services"]);
-    const count = Object.keys(result.services || {}).length;
+    const count = await getServiceCount();
     await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
     await chrome.action.setBadgeBackgroundColor({ color: "#666" });
   } catch (error) {
@@ -110,14 +85,14 @@ type NewEvent =
 
 async function addEvent(event: NewEvent): Promise<EventLog> {
   return queueStorageOperation(async () => {
-    const storage = await initStorage();
+    const storage = await getStorage();
     const newEvent = {
       ...event,
       id: generateEventId(),
     } as EventLog;
     storage.events.unshift(newEvent);
     storage.events = storage.events.slice(0, MAX_EVENTS);
-    await saveStorage({ events: storage.events });
+    await setStorage({ events: storage.events });
     await updateBadge();
     return newEvent;
   });
@@ -136,7 +111,7 @@ function createDefaultService(domain: string): DetectedService {
 
 async function updateService(domain: string, update: Partial<DetectedService>) {
   return queueStorageOperation(async () => {
-    const storage = await initStorage();
+    const storage = await getStorage();
     const existing = storage.services[domain] || createDefaultService(domain);
 
     storage.services[domain] = {
@@ -144,14 +119,14 @@ async function updateService(domain: string, update: Partial<DetectedService>) {
       ...update,
     };
 
-    await saveStorage({ services: storage.services });
+    await setStorage({ services: storage.services });
     await updateBadge();
   });
 }
 
 async function addCookieToService(domain: string, cookie: CookieInfo) {
   return queueStorageOperation(async () => {
-    const storage = await initStorage();
+    const storage = await getStorage();
 
     if (!storage.services[domain]) {
       storage.services[domain] = createDefaultService(domain);
@@ -163,7 +138,7 @@ async function addCookieToService(domain: string, cookie: CookieInfo) {
       service.cookies.push(cookie);
     }
 
-    await saveStorage({ services: storage.services });
+    await setStorage({ services: storage.services });
     await updateBadge();
   });
 }
@@ -228,7 +203,7 @@ async function handleCSPViolation(
   data: Omit<CSPViolation, "type"> & { type?: string },
   sender: chrome.runtime.MessageSender
 ): Promise<{ success: boolean; reason?: string }> {
-  const storage = await initStorage();
+  const storage = await getStorage();
   const config = storage.cspConfig || DEFAULT_CSP_CONFIG;
 
   if (!config.enabled || !config.collectCSPViolations) {
@@ -271,7 +246,7 @@ async function handleNetworkRequest(
   data: Omit<NetworkRequest, "type"> & { type?: string },
   sender: chrome.runtime.MessageSender
 ): Promise<{ success: boolean; reason?: string }> {
-  const storage = await initStorage();
+  const storage = await getStorage();
   const config = storage.cspConfig || DEFAULT_CSP_CONFIG;
 
   if (!config.enabled || !config.collectNetworkRequests) {
@@ -297,7 +272,7 @@ async function handleNetworkRequest(
 
 async function storeCSPReport(report: CSPReport) {
   return queueStorageOperation(async () => {
-    const storage = await initStorage();
+    const storage = await getStorage();
     const config = storage.cspConfig || DEFAULT_CSP_CONFIG;
     const maxReports = config.maxStoredReports;
 
@@ -308,7 +283,7 @@ async function storeCSPReport(report: CSPReport) {
       cspReports.splice(0, cspReports.length - maxReports);
     }
 
-    await saveStorage({ cspReports });
+    await setStorage({ cspReports });
   });
 }
 
@@ -326,7 +301,7 @@ async function flushReportQueue() {
 async function generateCSPPolicy(
   options?: Partial<CSPGenerationOptions>
 ): Promise<GeneratedCSPPolicy> {
-  const storage = await initStorage();
+  const storage = await getStorage();
   const cspReports = storage.cspReports || [];
   const analyzer = new CSPAnalyzer(cspReports);
   return analyzer.generatePolicy({
@@ -341,7 +316,7 @@ async function generateCSPPolicy(
 async function generateCSPPolicyByDomain(
   options?: Partial<CSPGenerationOptions>
 ): Promise<GeneratedCSPByDomain> {
-  const storage = await initStorage();
+  const storage = await getStorage();
   const cspReports = storage.cspReports || [];
   const analyzer = new CSPAnalyzer(cspReports);
   return analyzer.generatePolicyByDomain({
@@ -354,7 +329,7 @@ async function generateCSPPolicyByDomain(
 }
 
 async function getCSPConfig(): Promise<CSPConfig> {
-  const storage = await initStorage();
+  const storage = await getStorage();
   return storage.cspConfig || DEFAULT_CSP_CONFIG;
 }
 
@@ -363,7 +338,7 @@ async function setCSPConfig(
 ): Promise<{ success: boolean }> {
   const current = await getCSPConfig();
   const updated = { ...current, ...newConfig };
-  await saveStorage({ cspConfig: updated });
+  await setStorage({ cspConfig: updated });
 
   if (cspReporter) {
     const endpoint =
@@ -375,7 +350,7 @@ async function setCSPConfig(
 }
 
 async function clearCSPData(): Promise<{ success: boolean }> {
-  await chrome.storage.local.remove(["cspReports"]);
+  await clearCSPReports();
   reportQueue = [];
   return { success: true };
 }
@@ -383,7 +358,7 @@ async function clearCSPData(): Promise<{ success: boolean }> {
 async function getCSPReports(options?: {
   type?: "csp-violation" | "network-request";
 }): Promise<CSPReport[]> {
-  const storage = await initStorage();
+  const storage = await getStorage();
   const cspReports = storage.cspReports || [];
 
   if (options?.type === "csp-violation") {
