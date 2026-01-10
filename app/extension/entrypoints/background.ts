@@ -20,6 +20,7 @@ import { DEFAULT_CSP_CONFIG } from "@service-policy-auditor/core";
 import { CSPAnalyzer, type GeneratedCSPByDomain } from "@service-policy-auditor/csp";
 import { startCookieMonitor, onCookieChange } from "@/utils/cookie-monitor";
 import { CSPReporter } from "@/utils/csp-reporter";
+import { createMessageRouter, fireAndForget } from "@/utils/message-handler";
 
 const MAX_EVENTS = 1000;
 const DEV_REPORT_ENDPOINT = "http://localhost:3001/api/v1/reports";
@@ -399,6 +400,64 @@ async function getCSPReports(options?: {
   return cspReports;
 }
 
+function setupMessageHandlers() {
+  const router = createMessageRouter();
+
+  // Page analysis (fire-and-forget)
+  router.register<PageAnalysis, void>("PAGE_ANALYZED", {
+    handler: async (data) => {
+      await handlePageAnalysis(data);
+    },
+    errorResponse: undefined,
+    logPrefix: "page analysis",
+  });
+
+  // CSP handlers
+  router.register("CSP_VIOLATION", {
+    handler: handleCSPViolation,
+    errorResponse: { success: false, reason: "Error" },
+  });
+
+  router.register("NETWORK_REQUEST", {
+    handler: handleNetworkRequest,
+    errorResponse: { success: false, reason: "Error" },
+  });
+
+  router.register("GET_CSP_REPORTS", {
+    handler: async (data) => getCSPReports(data),
+    errorResponse: [],
+  });
+
+  router.register("GENERATE_CSP", {
+    handler: async (data: { options?: Partial<CSPGenerationOptions> } | undefined) =>
+      generateCSPPolicy(data?.options),
+    errorResponse: null,
+  });
+
+  router.register("GENERATE_CSP_BY_DOMAIN", {
+    handler: async (data: { options?: Partial<CSPGenerationOptions> } | undefined) =>
+      generateCSPPolicyByDomain(data?.options),
+    errorResponse: null,
+  });
+
+  router.register("GET_CSP_CONFIG", {
+    handler: async () => getCSPConfig(),
+    errorResponse: DEFAULT_CSP_CONFIG,
+  });
+
+  router.register("SET_CSP_CONFIG", {
+    handler: async (data) => setCSPConfig(data as Partial<CSPConfig>),
+    errorResponse: { success: false },
+  });
+
+  router.register("CLEAR_CSP_DATA", {
+    handler: async () => clearCSPData(),
+    errorResponse: { success: false },
+  });
+
+  router.listen();
+}
+
 export default defineBackground(() => {
   // Initialize CSP reporter on startup
   getCSPConfig().then((config) => {
@@ -412,114 +471,11 @@ export default defineBackground(() => {
 
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === "flushCSPReports") {
-      flushReportQueue().catch((error) => {
-        console.error("[Service Policy Auditor] Error flushing CSP reports:", error);
-      });
+      fireAndForget(flushReportQueue(), "flushing CSP reports");
     }
   });
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    // Existing service detection handler
-    if (message.type === "PAGE_ANALYZED") {
-      handlePageAnalysis(message.payload).catch((error) => {
-        console.error(
-          "[Service Policy Auditor] Error handling page analysis:",
-          error
-        );
-      });
-      return true;
-    }
-
-    // CSP Violation handler
-    if (message.type === "CSP_VIOLATION") {
-      handleCSPViolation(message.data, sender)
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error handling CSP violation:", error);
-          sendResponse({ success: false, reason: String(error) });
-        });
-      return true;
-    }
-
-    // Network Request handler
-    if (message.type === "NETWORK_REQUEST") {
-      handleNetworkRequest(message.data, sender)
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error handling network request:", error);
-          sendResponse({ success: false, reason: String(error) });
-        });
-      return true;
-    }
-
-    // Get CSP Reports
-    if (message.type === "GET_CSP_REPORTS") {
-      getCSPReports(message.data)
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error getting CSP reports:", error);
-          sendResponse([]);
-        });
-      return true;
-    }
-
-    // Generate CSP Policy
-    if (message.type === "GENERATE_CSP") {
-      generateCSPPolicy(message.data?.options)
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error generating CSP:", error);
-          sendResponse(null);
-        });
-      return true;
-    }
-
-    // Generate CSP Policy by Domain
-    if (message.type === "GENERATE_CSP_BY_DOMAIN") {
-      generateCSPPolicyByDomain(message.data?.options)
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error generating CSP by domain:", error);
-          sendResponse(null);
-        });
-      return true;
-    }
-
-    // Get CSP Config
-    if (message.type === "GET_CSP_CONFIG") {
-      getCSPConfig()
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error getting CSP config:", error);
-          sendResponse(DEFAULT_CSP_CONFIG);
-        });
-      return true;
-    }
-
-    // Set CSP Config
-    if (message.type === "SET_CSP_CONFIG") {
-      setCSPConfig(message.data)
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error setting CSP config:", error);
-          sendResponse({ success: false });
-        });
-      return true;
-    }
-
-    // Clear CSP Data
-    if (message.type === "CLEAR_CSP_DATA") {
-      clearCSPData()
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("[Service Policy Auditor] Error clearing CSP data:", error);
-          sendResponse({ success: false });
-        });
-      return true;
-    }
-
-    return true;
-  });
+  setupMessageHandlers();
 
   startCookieMonitor();
 
@@ -528,21 +484,19 @@ export default defineBackground(() => {
 
     const domain = cookie.domain.replace(/^\./, "");
 
-    addCookieToService(domain, cookie).catch((error) => {
-      console.error("[Service Policy Auditor] Error adding cookie:", error);
-    });
-
-    addEvent({
-      type: "cookie_set",
-      domain,
-      timestamp: cookie.detectedAt,
-      details: {
-        name: cookie.name,
-        isSession: cookie.isSession,
-      },
-    }).catch((error) => {
-      console.error("[Service Policy Auditor] Error adding event:", error);
-    });
+    fireAndForget(addCookieToService(domain, cookie), "adding cookie");
+    fireAndForget(
+      addEvent({
+        type: "cookie_set",
+        domain,
+        timestamp: cookie.detectedAt,
+        details: {
+          name: cookie.name,
+          isSession: cookie.isSession,
+        },
+      }),
+      "adding cookie event"
+    );
   });
 
   updateBadge();
