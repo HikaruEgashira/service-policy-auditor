@@ -382,7 +382,7 @@ export function DashboardApp() {
         <div style={styles.headerTop}>
           <div>
             <h1 style={styles.title}>
-              CASB Dashboard
+              Auditor Dashboard
               <Badge variant={status.variant} size="md" dot={status.dot}>{status.label}</Badge>
             </h1>
             <p style={styles.subtitle}>
@@ -628,13 +628,15 @@ export function DashboardApp() {
               { key: "timestamp", header: "日時", width: "160px", render: (e) => new Date(e.timestamp).toLocaleString("ja-JP") },
               { key: "type", header: "タイプ", width: "140px", render: (e) => <Badge variant={e.type.includes("violation") || e.type.includes("nrd") ? "danger" : e.type.includes("ai") || e.type.includes("login") ? "warning" : "default"}>{e.type}</Badge> },
               { key: "domain", header: "ドメイン", width: "200px", render: (e) => <code style={{ fontSize: "12px" }}>{e.domain}</code> },
-              { key: "details", header: "詳細", render: (e) => {
-                const d = e.details as Record<string, unknown>;
-                if (!d) return "-";
-                if (e.type === "csp_violation") return `${d.directive}: ${truncate(String(d.blockedURL || ""), 30)}`;
-                if (e.type === "ai_prompt_sent") return `${d.provider}/${d.model}`;
-                return JSON.stringify(d).substring(0, 50);
-              }},
+              {
+                key: "details", header: "詳細", render: (e) => {
+                  const d = e.details as Record<string, unknown>;
+                  if (!d) return "-";
+                  if (e.type === "csp_violation") return `${d.directive}: ${truncate(String(d.blockedURL || ""), 30)}`;
+                  if (e.type === "ai_prompt_sent") return `${d.provider}/${d.model}`;
+                  return JSON.stringify(d).substring(0, 50);
+                }
+              },
             ]}
           />
         </div>
