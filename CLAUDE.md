@@ -1,4 +1,4 @@
-Chrome ExtensionとしてのCASB。サービスのプライバシーポリシー情報を整理・提供。
+Chrome ExtensionとしてのCASB/Browser Security
 
 ## 構造
 
