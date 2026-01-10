@@ -12,7 +12,7 @@ export type {
   EventLogType,
 } from "./casb-types.js";
 
-// NRD Detection Types
+// NRD Detection (re-export from @service-policy-auditor/nrd)
 export type {
   HeuristicScores,
   NRDResult,
@@ -20,12 +20,12 @@ export type {
   NRDDetectionMethod,
   NRDConfidence,
   NRDCache,
-} from "./nrd-types.js";
+  RDAPEvent,
+  RDAPResponse,
+} from "@service-policy-auditor/nrd";
 
-export { DEFAULT_NRD_CONFIG } from "./nrd-types.js";
-
-// NRD Heuristic Detection
 export {
+  DEFAULT_NRD_CONFIG,
   SUSPICIOUS_TLDS,
   calculateEntropy,
   extractSLD,
@@ -35,18 +35,11 @@ export {
   isRandomLooking,
   calculateHeuristics,
   isHighRiskHeuristics,
-} from "./nrd-heuristics.js";
-
-// NRD RDAP Client
-export type { RDAPEvent, RDAPResponse } from "./nrd-rdap.js";
-export {
   queryRDAP,
   extractRegistrationDate,
   extractDomainStatus,
-} from "./nrd-rdap.js";
-
-// NRD Detector Factory
-export { createNRDDetector } from "./nrd-detector.js";
+  createNRDDetector,
+} from "@service-policy-auditor/nrd";
 
 // Detection Types
 export type {
@@ -98,7 +91,7 @@ export { createPrivacyFinder } from "./privacy-finder.js";
 export { createTosFinder } from "./tos-finder.js";
 export { createLoginDetector } from "./login-detector.js";
 
-// AI Prompt Detection Types
+// AI Prompt Detection (re-export from @service-policy-auditor/ai-detector)
 export type {
   InferredProvider,
   AIDetectionMethod,
@@ -108,15 +101,46 @@ export type {
   AIPromptSentDetails,
   AIResponseReceivedDetails,
   AIMonitorConfig,
-} from "./ai-types.js";
+} from "@service-policy-auditor/ai-detector";
 
-export { DEFAULT_AI_MONITOR_CONFIG } from "./ai-types.js";
-
-// AI Prompt Detection
 export {
+  DEFAULT_AI_MONITOR_CONFIG,
   isAIRequestBody,
   extractPromptContent,
   extractModel,
   extractResponseContent,
   inferProviderFromResponse,
-} from "./ai-detector.js";
+} from "@service-policy-auditor/ai-detector";
+
+// Typosquatting Detection (re-export from @service-policy-auditor/typosquat)
+export type {
+  HomoglyphType,
+  HomoglyphMatch,
+  ScriptType,
+  ScoreBreakdown,
+  TyposquatScores,
+  TyposquatDetectionMethod,
+  TyposquatConfidence,
+  TyposquatResult,
+  TyposquatConfig,
+  TyposquatDetectedDetails,
+  TyposquatCache,
+} from "@service-policy-auditor/typosquat";
+
+export {
+  DEFAULT_TYPOSQUAT_CONFIG,
+  LATIN_HOMOGLYPHS,
+  CYRILLIC_TO_LATIN,
+  JAPANESE_HOMOGLYPHS,
+  getCharacterScript,
+  detectScripts,
+  isSuspiciousMixedScript,
+  detectLatinHomoglyphs,
+  detectCyrillicHomoglyphs,
+  detectJapaneseHomoglyphs,
+  isPunycodeDomain,
+  decodePunycode,
+  calculateTyposquatHeuristics,
+  isHighRiskTyposquat,
+  createTyposquatDetector,
+} from "@service-policy-auditor/typosquat";

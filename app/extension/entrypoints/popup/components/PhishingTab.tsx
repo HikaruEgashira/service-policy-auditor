@@ -1,5 +1,5 @@
 import type { DetectedService, EventLog } from "@service-policy-auditor/detectors";
-import { NRDList } from "./NRDList";
+import { DomainList } from "./DomainList";
 import { EventLogList } from "./EventLog";
 import { NRDSettings } from "./NRDSettings";
 import { usePopupStyles } from "../styles";
@@ -14,11 +14,11 @@ export function PhishingTab({ services, events }: Props) {
 
   return (
     <div>
-      <NRDList services={services} />
+      <DomainList services={services} />
 
       {events.length > 0 && (
         <div style={styles.divider}>
-          <EventLogList events={events} filterTypes={["nrd_detected"]} title="アラート" />
+          <EventLogList events={events} filterTypes={["nrd_detected", "typosquat_detected"]} title="アラート" />
         </div>
       )}
 
