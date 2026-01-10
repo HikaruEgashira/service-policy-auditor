@@ -1,5 +1,32 @@
+/**
+ * @fileoverview SASE Security Audit Domain Knowledge
+ *
+ * このファイルはSASE（Secure Access Service Edge）における
+ * CSP（Content Security Policy）監査のためのドメイン知識を定義する。
+ *
+ * CSPはブラウザのセキュリティ機構であり、以下を制御する：
+ * - スクリプト、スタイル、画像等の読み込み元
+ * - XSS（クロスサイトスクリプティング）攻撃の防止
+ * - データ漏洩リスクの軽減
+ *
+ * このCASBはCSP違反を監視し、セキュリティリスクを可視化する。
+ */
+
 import type { CSPConfig } from "./types";
 
+// ============================================================================
+// CSP Directive Mapping（CSPディレクティブマッピング）
+// ----------------------------------------------------------------------------
+// ネットワークリクエストの種類からCSPディレクティブへのマッピング。
+// ブラウザが発行するリクエストタイプを適切なCSPルールに対応付ける。
+// ============================================================================
+
+/**
+ * リクエストタイプ → CSPディレクティブ マッピング
+ *
+ * 使用例: ネットワークリクエストを収集し、CSPポリシーを自動生成する際に
+ * どのディレクティブに割り当てるかを決定する。
+ */
 export const INITIATOR_TO_DIRECTIVE: Record<string, string> = {
   fetch: "connect-src",
   xhr: "connect-src",
@@ -17,8 +44,23 @@ export const INITIATOR_TO_DIRECTIVE: Record<string, string> = {
   manifest: "manifest-src",
 };
 
+// ============================================================================
+// CSP Security Levels（CSPセキュリティレベル）
+// ----------------------------------------------------------------------------
+// CSPポリシー生成時に考慮すべきディレクティブの分類。
+// ============================================================================
+
+/**
+ * 厳格モード対象ディレクティブ
+ * - これらのディレクティブは 'unsafe-inline' や 'unsafe-eval' を避けるべき
+ */
 export const STRICT_DIRECTIVES = ["script-src", "style-src", "default-src"];
 
+/**
+ * 必須ディレクティブ
+ * - 最低限のCSPポリシーで必ず定義すべきディレクティブ
+ * - OWASP推奨に基づく
+ */
 export const REQUIRED_DIRECTIVES = [
   "default-src",
   "script-src",
@@ -27,6 +69,13 @@ export const REQUIRED_DIRECTIVES = [
   "frame-ancestors",
 ];
 
+// ============================================================================
+// CSP Collection Configuration（CSP収集設定）
+// ----------------------------------------------------------------------------
+// CSP違反とネットワークリクエストの収集に関するデフォルト設定。
+// ============================================================================
+
+/** CSP収集のデフォルト設定 */
 export const DEFAULT_CSP_CONFIG: CSPConfig = {
   enabled: true,
   collectNetworkRequests: true,
@@ -35,5 +84,8 @@ export const DEFAULT_CSP_CONFIG: CSPConfig = {
   maxStoredReports: 1000,
 };
 
+/** バッチ送信間隔（ミリ秒） */
 export const DEFAULT_BATCH_INTERVAL_MS = 30000;
+
+/** バッチサイズ上限 */
 export const DEFAULT_BATCH_SIZE = 100;

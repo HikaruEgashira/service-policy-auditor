@@ -1,4 +1,24 @@
-// Login page URL patterns
+/**
+ * @fileoverview CASB Detection Domain Knowledge
+ *
+ * このファイルはCASB（Cloud Access Security Broker）における
+ * サービス検出のためのドメイン知識を定義する。
+ *
+ * ドメインサブセクション:
+ * 1. Authentication Detection（認証検出）- Shadow IT検出用
+ * 2. Privacy Policy Detection（プライバシーポリシー検出）- コンプライアンス監視用
+ * 3. Terms of Service Detection（利用規約検出）- リスク評価用
+ * 4. Session Detection（セッション検出）- アクセス追跡用
+ */
+
+// ============================================================================
+// 1. Authentication Detection（認証検出）
+// ----------------------------------------------------------------------------
+// Shadow IT検出のコア機能。ログインページの存在は、そのサービスが
+// ユーザー認証を必要とする＝データを保存/処理する可能性を示す。
+// ============================================================================
+
+/** ログインページURL判定パターン */
 export const LOGIN_URL_PATTERNS = [
   /\/login/i,
   /\/signin/i,
@@ -8,7 +28,14 @@ export const LOGIN_URL_PATTERNS = [
   /\/session\/new/i,
 ];
 
-// Privacy policy URL patterns
+// ============================================================================
+// 2. Privacy Policy Detection（プライバシーポリシー検出）
+// ----------------------------------------------------------------------------
+// コンプライアンス監視機能。GDPR、CCPA等の規制対応状況を評価するために
+// プライバシーポリシーの存在と内容を検出する。多言語対応。
+// ============================================================================
+
+/** プライバシーポリシーURL判定パターン（多言語対応） */
 export const PRIVACY_URL_PATTERNS = [
   /\/privacy[-_]?policy/i,
   /\/privacy/i,
@@ -22,7 +49,7 @@ export const PRIVACY_URL_PATTERNS = [
   /プライバシー/,
 ];
 
-// Privacy policy link text patterns (multilingual)
+/** プライバシーポリシーリンクテキスト判定パターン（多言語対応） */
 export const PRIVACY_TEXT_PATTERNS = [
   /privacy\s*policy/i,
   /privacy\s*notice/i,
@@ -41,12 +68,16 @@ export const PRIVACY_TEXT_PATTERNS = [
   /隱私/,
 ];
 
-// Privacy metadata patterns
+/** JSON-LDメタデータのプライバシーポリシーキー */
 export const JSONLD_PRIVACY_KEYS = ["privacyPolicy", "privacyUrl"];
+
+/** link[rel]属性のプライバシーポリシー値 */
 export const LINK_REL_PRIVACY_VALUES = ["privacy-policy", "privacy"];
+
+/** OGメタタグのプライバシーポリシーパターン */
 export const OG_PRIVACY_PATTERNS = [/privacy/i, /datenschutz/i];
 
-// Footer selectors for privacy policy and TOS links
+/** フッター領域セレクタ（ポリシーリンク検索用） */
 export const FOOTER_SELECTORS = [
   "footer a",
   '[class*="footer"] a',
@@ -56,7 +87,14 @@ export const FOOTER_SELECTORS = [
   '[class*="bottom"] a',
 ];
 
-// Terms of Service URL patterns (multilingual)
+// ============================================================================
+// 3. Terms of Service Detection（利用規約検出）
+// ----------------------------------------------------------------------------
+// リスク評価機能。利用規約の存在と内容を検出し、データ利用ポリシー、
+// 責任範囲、知的財産権等のリスク要因を特定する。多言語対応。
+// ============================================================================
+
+/** 利用規約URL判定パターン（多言語対応） */
 export const TOS_URL_PATTERNS = [
   // Basic patterns
   /\/terms[-_]?of[-_]?service/i,
@@ -87,7 +125,7 @@ export const TOS_URL_PATTERNS = [
   /\/%E5%88%A9%E7%94%A8%E8%A6%8F%E7%B4%84/i,
 ];
 
-// Terms of Service link text patterns (multilingual)
+/** 利用規約リンクテキスト判定パターン（多言語対応） */
 export const TOS_TEXT_PATTERNS = [
   // English
   /terms\s*of\s*service/i,
@@ -123,12 +161,23 @@ export const TOS_TEXT_PATTERNS = [
   /서비스\s*약관/,
 ];
 
-// ToS metadata patterns
+/** JSON-LDメタデータの利用規約キー */
 export const TOS_JSONLD_KEYS = ["termsOfService", "termsUrl"];
+
+/** link[rel]属性の利用規約値 */
 export const TOS_LINK_REL_VALUES = ["terms-of-service", "terms", "tos"];
+
+/** OGメタタグの利用規約パターン */
 export const TOS_OG_PATTERNS = [/terms/i, /tos/i, /agb/i];
 
-// Session cookie name patterns
+// ============================================================================
+// 4. Session Detection（セッション検出）
+// ----------------------------------------------------------------------------
+// アクセス追跡機能。セッションCookieの検出により、ユーザーの認証状態と
+// サービス利用状況を追跡する。Shadow IT利用頻度の可視化に使用。
+// ============================================================================
+
+/** セッションCookie名判定パターン */
 export const SESSION_COOKIE_PATTERNS = [
   /^sess/i,
   /session/i,
@@ -141,22 +190,34 @@ export const SESSION_COOKIE_PATTERNS = [
   /_session$/i,
 ];
 
+// ============================================================================
+// Detection Helper Functions（検出ヘルパー関数）
+// ----------------------------------------------------------------------------
+// パターンマッチングのラッパー関数。各ドメインサブセクションの
+// パターンを使用して、URL/テキスト/Cookie名を判定する。
+// ============================================================================
+
+/** ログインページURLか判定 */
 export function isLoginUrl(url: string): boolean {
   return LOGIN_URL_PATTERNS.some((pattern) => pattern.test(url));
 }
 
+/** プライバシーポリシーURLか判定 */
 export function isPrivacyUrl(url: string): boolean {
   return PRIVACY_URL_PATTERNS.some((pattern) => pattern.test(url));
 }
 
+/** プライバシーポリシーリンクテキストか判定 */
 export function isPrivacyText(text: string): boolean {
   return PRIVACY_TEXT_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+/** セッションCookieか判定 */
 export function isSessionCookie(name: string): boolean {
   return SESSION_COOKIE_PATTERNS.some((pattern) => pattern.test(name));
 }
 
+/** 利用規約URLか判定（URLエンコード対応） */
 export function isTosUrl(url: string): boolean {
   try {
     const decoded = decodeURIComponent(url);
@@ -168,6 +229,7 @@ export function isTosUrl(url: string): boolean {
   }
 }
 
+/** 利用規約リンクテキストか判定 */
 export function isTosText(text: string): boolean {
   return TOS_TEXT_PATTERNS.some((pattern) => pattern.test(text));
 }
