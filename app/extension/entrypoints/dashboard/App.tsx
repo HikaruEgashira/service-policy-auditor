@@ -1327,7 +1327,7 @@ export function DashboardApp() {
       </div>
 
       <div style={dashboardStyles.tabs}>
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <button
             key={tab.id}
             style={
@@ -1336,7 +1336,17 @@ export function DashboardApp() {
                 : dashboardStyles.tab
             }
             onClick={() => setActiveTab(tab.id)}
+            title={`${tab.label} (Ctrl+${index + 1})`}
           >
+            <span
+              style={{
+                fontSize: "9px",
+                color: "hsl(0 0% 60%)",
+                marginRight: "4px",
+              }}
+            >
+              {index + 1}
+            </span>
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
               <span
