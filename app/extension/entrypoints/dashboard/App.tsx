@@ -1419,6 +1419,40 @@ export function DashboardApp() {
 
       {activeTab === "overview" && (
         <>
+          {/* セキュリティスコア */}
+          <div style={{ ...dashboardStyles.card, marginBottom: "24px", display: "flex", alignItems: "center", gap: "24px" }}>
+            <div style={{ textAlign: "center", minWidth: "120px" }}>
+              <div
+                style={{
+                  fontSize: "48px",
+                  fontWeight: 700,
+                  color: nrdServices.length > 0
+                    ? "hsl(0 70% 50%)"
+                    : violations.length > 50
+                      ? "hsl(45 100% 40%)"
+                      : violations.length > 10
+                        ? "hsl(45 100% 50%)"
+                        : "hsl(120 50% 40%)",
+                }}
+              >
+                {Math.max(0, 100 - (nrdServices.length * 30) - (violations.length * 0.5) - (aiPrompts.length * 2)).toFixed(0)}
+              </div>
+              <div style={{ fontSize: "12px", color: "hsl(0 0% 50%)", textTransform: "uppercase" }}>
+                セキュリティスコア
+              </div>
+            </div>
+            <div style={{ flex: 1, fontSize: "13px", color: "hsl(0 0% 40%)" }}>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>評価基準:</strong>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: 1.8 }}>
+                <li>NRD検出: <span style={{ color: nrdServices.length > 0 ? "hsl(0 70% 50%)" : "hsl(120 50% 40%)" }}>{nrdServices.length}件 (-30点/件)</span></li>
+                <li>CSP違反: <span style={{ color: violations.length > 50 ? "hsl(0 70% 50%)" : "hsl(0 0% 40%)" }}>{violations.length}件 (-0.5点/件)</span></li>
+                <li>AIプロンプト: <span style={{ color: aiPrompts.length > 0 ? "hsl(45 100% 40%)" : "hsl(0 0% 40%)" }}>{aiPrompts.length}件 (-2点/件)</span></li>
+              </ul>
+            </div>
+          </div>
+
           {/* クイックアクション */}
           <div style={dashboardStyles.section}>
             <h3 style={dashboardStyles.cardTitle}>クイックアクション</h3>
