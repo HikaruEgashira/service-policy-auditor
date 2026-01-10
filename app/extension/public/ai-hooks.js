@@ -41,18 +41,43 @@
         return true
       }
 
+      // ChatGPT internal format: { action: "next"|"variant", conversation_id, model }
+      if (isChatGPTConversation(obj)) {
+        return true
+      }
+
       return false
     } catch {
       return false
     }
   }
 
+  // ChatGPT internal conversation API format
+  function isChatGPTConversation(obj) {
+    // ChatGPT uses action: "next" | "variant" | "continue" with conversation_id
+    if (typeof obj.action === 'string' &&
+        ['next', 'variant', 'continue'].includes(obj.action) &&
+        typeof obj.conversation_id === 'string') {
+      return true
+    }
+    // New conversation: action with messages array
+    if (typeof obj.action === 'string' &&
+        obj.action === 'next' &&
+        Array.isArray(obj.messages)) {
+      return true
+    }
+    return false
+  }
+
   function isMessagesArray(messages) {
     if (!Array.isArray(messages) || messages.length === 0) return false
     return messages.some(m =>
-      m && typeof m === 'object' &&
-      typeof m.role === 'string' &&
-      ('content' in m || 'parts' in m)
+      m && typeof m === 'object' && (
+        // Standard Chat Completion format: { role: "user", content: "..." }
+        (typeof m.role === 'string' && ('content' in m || 'parts' in m)) ||
+        // ChatGPT internal format: { author: { role: "user" }, content: { parts: [...] } }
+        (m.author && typeof m.author.role === 'string' && m.content && Array.isArray(m.content.parts))
+      )
     )
   }
 
@@ -75,11 +100,11 @@
       const contentSize = bodyStr.length
       const truncated = contentSize > TRUNCATE_SIZE
 
-      // Chat Completion format
+      // Chat Completion format (including ChatGPT internal format)
       if (isMessagesArray(obj.messages)) {
         return {
           messages: obj.messages.map(m => ({
-            role: m.role || 'user',
+            role: m.role || m.author?.role || 'user',
             content: truncateString(extractMessageContent(m), TRUNCATE_SIZE),
           })),
           contentSize,
@@ -115,6 +140,18 @@
         }
       }
 
+      // ChatGPT conversation format (action-based)
+      if (isChatGPTConversation(obj)) {
+        return {
+          chatgptAction: obj.action,
+          conversationId: obj.conversation_id,
+          parentMessageId: obj.parent_message_id,
+          contentSize,
+          truncated,
+          model: obj.model,
+        }
+      }
+
       // Raw body
       return {
         rawBody: truncateString(bodyStr, TRUNCATE_SIZE),
@@ -142,6 +179,12 @@
           if (c.type === 'text' && typeof c.text === 'string') return c.text
           return ''
         })
+        .join('')
+    }
+    // ChatGPT internal format: content: { content_type: "text", parts: ["..."] }
+    if (message.content && Array.isArray(message.content.parts)) {
+      return message.content.parts
+        .map(p => typeof p === 'string' ? p : (p.text || ''))
         .join('')
     }
     if (typeof message.text === 'string') {
@@ -238,38 +281,6 @@
     return truncateString(chunks.join(''), TRUNCATE_SIZE)
   }
 
-  function inferProvider(text) {
-    try {
-      // Anthropic streaming indicator
-      if (text.includes('event: content_block_delta')) {
-        return 'anthropic'
-      }
-
-      const obj = JSON.parse(
-        text.startsWith('data: ') ? text.split('\n')[0].slice(6) : text
-      )
-
-      // Anthropic: content array
-      if (obj.content && Array.isArray(obj.content) && obj.content[0]?.text) {
-        return 'anthropic'
-      }
-
-      // Google Gemini: candidates array
-      if (obj.candidates && Array.isArray(obj.candidates)) {
-        return 'google'
-      }
-
-      // OpenAI compatible: choices array
-      if (obj.choices && Array.isArray(obj.choices)) {
-        return 'openai'
-      }
-
-      return 'unknown'
-    } catch {
-      return 'unknown'
-    }
-  }
-
   function truncateString(str, maxLength) {
     if (str.length <= maxLength) return str
     return str.substring(0, maxLength)
@@ -295,7 +306,7 @@
       return originalFetch.apply(this, arguments)
     }
 
-    // Check if this is an AI request by body structure only
+    // Check if this is an AI request by body structure
     if (!isAIRequestBody(body)) {
       return originalFetch.apply(this, arguments)
     }
@@ -335,7 +346,6 @@
         captureData.response = extractResponse(text, isStreaming)
         captureData.responseTimestamp = Date.now()
         captureData.response.latencyMs = Date.now() - startTime
-        captureData.provider = inferProvider(text)
 
         sendAICapture(captureData)
       }).catch(() => {
@@ -396,7 +406,6 @@
             captureData.response = extractResponse(responseText, isStreaming)
             captureData.responseTimestamp = Date.now()
             captureData.response.latencyMs = Date.now() - startTime
-            captureData.provider = inferProvider(responseText)
           }
         } catch {
           // ignore
