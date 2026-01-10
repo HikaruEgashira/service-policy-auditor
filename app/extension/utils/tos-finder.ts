@@ -1,6 +1,7 @@
 import {
   isTosUrl,
   isTosText,
+  isPrivacyText,
   FOOTER_SELECTORS,
   TOS_OG_PATTERNS,
   TOS_JSONLD_KEYS,
@@ -21,6 +22,16 @@ export interface TosResult {
   method: TosDetectionMethod;
 }
 
+// Patterns that should NOT be detected as ToS (privacy pages, etc.)
+const TOS_EXCLUSION_PATTERNS = [
+  /privacy/i,
+  /プライバシー/,
+  /datenschutz/i,
+  /개인정보/,
+  /隐私/,
+  /隱私/,
+];
+
 function decodeUrlSafe(url: string): string {
   try {
     return decodeURIComponent(url);
@@ -29,10 +40,38 @@ function decodeUrlSafe(url: string): string {
   }
 }
 
-function isTosUrlWithDecode(url: string): boolean {
-  if (isTosUrl(url)) return true;
+function getPathFromUrl(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
+function isExcludedUrl(url: string): boolean {
   const decoded = decodeUrlSafe(url);
-  return decoded !== url && isTosUrl(decoded);
+  return TOS_EXCLUSION_PATTERNS.some(
+    (pattern) => pattern.test(url) || pattern.test(decoded)
+  );
+}
+
+function isTosUrlWithDecode(url: string): boolean {
+  // Extract pathname to avoid matching domain parts
+  const pathname = getPathFromUrl(url);
+  const decoded = decodeUrlSafe(pathname);
+
+  // Check exclusion patterns first (both URL patterns and text patterns)
+  if (isExcludedUrl(pathname)) return false;
+  if (isPrivacyText(decoded)) return false;
+
+  // Check URL patterns
+  if (isTosUrl(pathname)) return true;
+  if (decoded !== pathname && isTosUrl(decoded)) return true;
+
+  // Also check text patterns on decoded pathname (for Japanese/CJK URLs)
+  if (isTosText(decoded)) return true;
+
+  return false;
 }
 
 function findFromLinkRel(): string | null {
