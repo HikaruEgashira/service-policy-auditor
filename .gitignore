@@ -2,5 +2,7 @@ node_modules/
 dist/
 .DS_Store
 *.log
+.wxt/
 
 app/server/data/service_exposure.db
+*.local.md
