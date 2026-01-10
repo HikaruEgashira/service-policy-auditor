@@ -1,8 +1,8 @@
-# ADR 008: Core パッケージのドメインモデル明確化
+# ADR 008: Core パッケージの廃止とドメイン分割
 
 ## ステータス
 
-Proposed
+Accepted
 
 ## コンテキスト
 
@@ -13,111 +13,111 @@ Proposed
 3. **CSP定数（csp-constants.ts）**: CSP関連の設定値
 4. **URLユーティリティ（url-utils.ts）**: URL操作関数
 
-ADR-007では「共通ユーティリティ層」として導入されたが、SASE/CASBドメインの観点からは、これらの責務はより明確なドメイン境界を持つべきである。
+### 問題点
 
-### SASE/CASBにおけるドメイン概念
+1. **「core」という曖昧な命名**: ドメイン概念を反映していない
+2. **責務の混在**: 2つの異なるドメインが同一パッケージに存在
+   - CASBドメイン（サービス可視性、ポリシー検出）
+   - ブラウザセキュリティドメイン（CSP監査）
+3. **依存の集中**: すべてのパッケージがcoreに依存する構造
 
-**SASE (Secure Access Service Edge)** と **CASB (Cloud Access Security Broker)** の文脈では：
+### ドメイン分析
 
-| 概念 | 説明 | 該当ファイル |
+このプロジェクトには**2つの異なるドメイン**が存在する：
+
+#### 1. CASBドメイン（Cloud Access Security Broker）
+
+SaaSサービスの可視化とリスク評価を担う。
+
+| 概念 | 説明 | 現在の場所 |
 |------|------|------------|
 | **サービス可視性** | SaaSサービスの検出・識別 | types.ts (DetectedService, CookieInfo) |
 | **ポリシー検出** | Privacy Policy, ToS等の法的文書検出 | patterns.ts (PRIVACY_*, TOS_*) |
 | **認証検出** | ログイン・セッション検出 | patterns.ts (LOGIN_*, SESSION_*) |
-| **セキュリティ監査** | CSP違反・ネットワーク監視 | types.ts (CSP*), csp-constants.ts |
-| **共通インフラ** | URL処理等の技術基盤 | url-utils.ts |
 
-現状の問題点：
-1. **ドメイン境界の曖昧さ**: 「共通ユーティリティ」という命名がドメイン概念を隠蔽
-2. **責務の混在**: サービス可視性とセキュリティ監査が同一パッケージに存在
-3. **型の肥大化**: types.tsが155行に達し、異なるドメイン概念が混在
+#### 2. ブラウザセキュリティドメイン
+
+CSP（Content Security Policy）はブラウザのセキュリティ機構であり、**SASEやCASBの概念には含まれない**。
+
+| 概念 | 説明 | 現在の場所 |
+|------|------|------------|
+| **CSP監査** | CSP違反の検出・分析 | types.ts (CSPViolation, CSPReport) |
+| **ポリシー生成** | ネットワークリクエストからのCSP自動生成 | csp-constants.ts |
 
 ## 決定
 
-`core` パッケージの責務を以下のドメインモデルとして明確化する：
+`@service-policy-auditor/core` パッケージを廃止し、ドメインごとに分割する。
 
-### ドメインモデル定義
+### 分割後の構造
 
-```
-core/
-├── types.ts           # ドメインエンティティ（すべてのバウンデッドコンテキストで共有）
-├── patterns.ts        # 検出ドメインの知識（Detection Domain Knowledge）
-├── csp-constants.ts   # CSP監査ドメインの知識（Security Audit Domain Knowledge）
-└── url-utils.ts       # 技術インフラ（Infrastructure）
-```
-
-### 責務の定義
-
-#### 1. ドメインエンティティ層 (types.ts)
-**責務**: すべてのバウンデッドコンテキストで共有されるデータ構造の定義
-
-| カテゴリ | 型 | ドメイン |
-|----------|-----|---------|
-| サービス可視性 | `DetectedService`, `CookieInfo` | SaaS Discovery |
-| イベント | `EventLog`, `EventLogBase` | Event Sourcing |
-| ストレージ | `StorageData` | Persistence |
-| CSP監査 | `CSPViolation`, `NetworkRequest`, `GeneratedCSPPolicy` | Security Audit |
-
-#### 2. 検出ドメイン知識層 (patterns.ts)
-**責務**: サービス・ポリシー検出のためのパターンマッチング知識
-
-| サブドメイン | パターン | 目的 |
-|-------------|---------|------|
-| 認証検出 | `LOGIN_URL_PATTERNS` | Shadow IT検出 |
-| プライバシーポリシー検出 | `PRIVACY_*_PATTERNS` | コンプライアンス監視 |
-| 利用規約検出 | `TOS_*_PATTERNS` | リスク評価 |
-| セッション検出 | `SESSION_COOKIE_PATTERNS` | アクセス追跡 |
-
-#### 3. CSP監査ドメイン知識層 (csp-constants.ts)
-**責務**: Content Security Policy監査のための設定・定数
-
-| 定数 | 目的 |
-|------|------|
-| `INITIATOR_TO_DIRECTIVE` | リクエストタイプからCSPディレクティブへのマッピング |
-| `STRICT_DIRECTIVES` | 厳格モード用ディレクティブ |
-| `REQUIRED_DIRECTIVES` | 必須ディレクティブ |
-| `DEFAULT_CSP_CONFIG` | デフォルト設定 |
-
-#### 4. 技術インフラ層 (url-utils.ts)
-**責務**: ドメインに依存しないURL処理ユーティリティ
-
-### パッケージ境界の維持
-
-現時点ではファイル分割は行わず、以下の原則で境界を維持する：
-
-1. **単一責任**: 各ファイルは1つのドメイン概念のみを扱う
-2. **依存方向**: `url-utils.ts` ← `patterns.ts` ← 他パッケージ
-3. **型の分離**: 将来的にCSP関連型を別パッケージに移行する余地を残す
-
-### 将来の分割指針
-
-以下の条件を満たした場合、パッケージ分割を検討：
-
-- CSP関連コードが200行を超える
-- CSP専用のテストスイートが必要になる
-- 他プロジェクトでCSP機能のみを再利用したい
-
-分割案：
 ```
 packages/
-├── core/           # サービス可視性 + 検出パターン
-├── csp-core/       # CSP監査ドメイン（将来）
-└── infra/          # 共通インフラ（将来）
+├── detectors/          # CASBドメイン: サービス検出
+│   ├── src/
+│   │   ├── types.ts           # DetectedService, CookieInfo, EventLog等
+│   │   ├── patterns.ts        # LOGIN_*, PRIVACY_*, TOS_*, SESSION_*
+│   │   ├── url-utils.ts       # URL処理ユーティリティ
+│   │   └── ...
+│   └── package.json
+│
+└── csp/                # ブラウザセキュリティドメイン: CSP監査
+    ├── src/
+    │   ├── types.ts           # CSPViolation, NetworkRequest, CSPReport等
+    │   ├── constants.ts       # INITIATOR_TO_DIRECTIVE, STRICT_DIRECTIVES等
+    │   └── ...
+    └── package.json
+```
+
+### マイグレーション計画
+
+#### Phase 1: 型の移動
+- `DetectedService`, `CookieInfo`, `EventLog`等 → `@detectors/types.ts`
+- `CSPViolation`, `NetworkRequest`, `CSPReport`等 → `@csp/types.ts`
+
+#### Phase 2: ユーティリティの移動
+- `patterns.ts` → `@detectors/patterns.ts`（既存のimportパスを維持）
+- `url-utils.ts` → `@detectors/url-utils.ts`
+- `csp-constants.ts` → `@csp/constants.ts`
+
+#### Phase 3: coreパッケージの削除
+- 依存パッケージのimportを更新
+- `@service-policy-auditor/core` を削除
+
+### 依存関係の変更
+
+**Before:**
+```
+extension → core
+         → detectors → core
+         → csp → core
+```
+
+**After:**
+```
+extension → detectors (CASB機能)
+         → csp (CSP機能)
 ```
 
 ## 結果
 
 ### メリット
-- **ドメイン境界の明確化**: SASE/CASBの概念がコードに反映される
-- **コミュニケーション改善**: ドメインエキスパートとの会話が容易になる
-- **拡張性**: 新しいドメイン概念の追加場所が明確
+- **ドメイン境界の明確化**: パッケージ名がドメインを反映
+- **依存関係の簡素化**: 「core」という抽象的な依存がなくなる
+- **独立性の向上**: 各ドメインが独立して進化可能
 
 ### トレードオフ
-- **即時のリファクタリングなし**: 既存コードへの影響を最小化
-- **ドキュメント依存**: コード構造だけでは境界が見えにくい
+- **マイグレーションコスト**: import文の更新が必要
+- **型の重複リスク**: 共通型（EventLog等）の扱いに注意が必要
+
+### 共通型の扱い
+
+`EventLog`のようにCSPとCASB両方で使用される型は、以下のいずれかで対応：
+
+1. **detectors側に配置**: CASBがメインドメインのため
+2. **interface拡張**: CSP側で独自のイベント型を定義し、detectors側のEventLogBaseを拡張
 
 ## 関連ADR
 
 - ADR 004: プライバシーポリシー検出
 - ADR 006: 利用規約検出機能
-- ADR 007: 共通ユーティリティ層の導入
+- ADR 007: 共通ユーティリティ層の導入（本ADRにより superseded）

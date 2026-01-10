@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Accepted
+Superseded by [ADR 008](./008-core-domain-model.md)
 
 ## コンテキスト
 
