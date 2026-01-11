@@ -8,7 +8,7 @@ export default defineConfig({
     name: "Pleno Audit",
     version: "0.0.1",
     description:
-      "Detect and visualize login pages, privacy policies, session cookies, and CSP violations",
+      "Personal Browser Security",
     permissions: ["cookies", "storage", "activeTab", "alarms", "offscreen", "scripting"],
     host_permissions: ["<all_urls>"],
     content_security_policy: {

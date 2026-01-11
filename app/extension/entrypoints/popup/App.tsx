@@ -172,7 +172,7 @@ function PopupContent() {
     <div style={styles.container}>
       <header style={styles.header}>
         <h1 style={styles.title}>
-          Auditor
+          Pleno Audit
           <Badge variant={status.variant} size="sm" dot={status.dot}>{status.label}</Badge>
         </h1>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>

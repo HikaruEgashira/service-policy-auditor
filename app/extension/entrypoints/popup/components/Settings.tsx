@@ -78,7 +78,7 @@ export function Settings() {
 
   return (
     <div style={styles.section}>
-      <h3 style={styles.sectionTitle}>CSP Auditor Settings</h3>
+      <h3 style={styles.sectionTitle}>CSP Audit Settings</h3>
 
       <label style={styles.checkbox}>
         <input

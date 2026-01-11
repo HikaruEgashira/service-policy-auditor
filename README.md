@@ -13,7 +13,7 @@ Browserを通してアクセスするWebサービスの利用状況を可視化�
     - NRD(Newly Registered Domain)検出
     - Typosquatting検出
 - Malware
-    - CSP Auditor: Content Security Policy違反の検出・レポート・ポリシー生成
+    - CSP Audit: Content Security Policy違反の検出・レポート・ポリシー生成
 
 ## Screenshots
 

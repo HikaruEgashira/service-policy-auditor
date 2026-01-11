@@ -451,7 +451,7 @@ function DashboardContent() {
         <div style={styles.headerTop}>
           <div>
             <h1 style={styles.title}>
-              Auditor Dashboard
+              Pleno Audit
               <Badge variant={status.variant} size="md" dot={status.dot}>{status.label}</Badge>
             </h1>
             <p style={styles.subtitle}>
