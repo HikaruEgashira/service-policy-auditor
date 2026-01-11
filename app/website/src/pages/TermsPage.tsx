@@ -182,8 +182,6 @@ export default function TermsPage() {
                 <ul className="space-y-2">
                   <ListItem allowed={false}>他者のプライバシーを侵害する目的での利用</ListItem>
                   <ListItem allowed={false}>不正アクセスやハッキングを目的とした利用</ListItem>
-                  <ListItem allowed={false}>本拡張機能の改変・リバースエンジニアリング</ListItem>
-                  <ListItem allowed={false}>商業目的での再配布</ListItem>
                 </ul>
               </div>
             </div>
@@ -212,11 +210,14 @@ export default function TermsPage() {
             </div>
           </Section>
 
-          <Section title="第5条（知的財産権）">
+          <Section title="第5条（ライセンス）">
             <p>
-              本拡張機能に関するすべての知的財産権は、開発者に帰属します。
-              ユーザーは、本規約で明示的に許可された範囲でのみ本拡張機能を使用できます。
+              本拡張機能は、GNU Affero General Public License v3.0（AGPL-3.0）の下で提供されています。
+              ユーザーは、AGPL-3.0の条件に従い、本拡張機能のソースコードの閲覧、改変、再配布を行うことができます。
             </p>
+            <HighlightBox type="info">
+              AGPL-3.0ライセンスの全文は、GitHubリポジトリのLICENSEファイルをご確認ください。
+            </HighlightBox>
           </Section>
 
           <Section title="第6条（サービスの変更・終了）">
