@@ -62,7 +62,7 @@ function TagBadge({ tag, url, variant = "default" }: { tag: string; url?: string
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ textDecoration: "none", marginRight: "4px" }}
+        style={{ textDecoration: "none", marginRight: "4px", marginBottom: "2px", display: "inline-block" }}
       >
         <Badge variant={variant}>{tag}</Badge>
       </a>
@@ -70,7 +70,7 @@ function TagBadge({ tag, url, variant = "default" }: { tag: string; url?: string
   }
 
   return (
-    <span style={{ marginRight: "4px" }}>
+    <span style={{ marginRight: "4px", marginBottom: "2px", display: "inline-block" }}>
       <Badge variant={variant}>{tag}</Badge>
     </span>
   );
@@ -91,7 +91,7 @@ function NRDBadge({
       : "新規登録ドメインの可能性";
 
   return (
-    <span style={{ marginRight: "4px" }} title={title}>
+    <span style={{ marginRight: "4px", marginBottom: "2px", display: "inline-block" }} title={title}>
       <Badge variant="danger">{label}</Badge>
     </span>
   );
