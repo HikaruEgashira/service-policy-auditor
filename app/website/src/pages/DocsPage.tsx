@@ -19,6 +19,7 @@ import {
   Globe,
   FileText,
 } from 'lucide-react';
+import Footer from '../components/Footer';
 
 // Types
 interface DocSection {
@@ -694,7 +695,7 @@ export default function DocsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-[#0a0a0a]">
       {/* Mobile header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-[#0a0a0a] border-b border-[#eaeaea] dark:border-[#333] z-30 flex items-center px-4">
         <button
@@ -708,7 +709,7 @@ export default function DocsPage() {
         </span>
       </header>
 
-      <div className="flex">
+      <div className="flex flex-1">
         <Sidebar
           activeSection={activeSection}
           onSectionChange={(id) => {
@@ -733,6 +734,7 @@ export default function DocsPage() {
           </div>
         </main>
       </div>
+      <Footer />
     </div>
   );
 }

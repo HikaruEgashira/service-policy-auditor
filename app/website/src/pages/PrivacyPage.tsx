@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, ArrowLeft, Lock, Eye, Database, Trash2, Mail } from 'lucide-react';
+import Footer from '../components/Footer';
 
 // Section Component
 const Section = ({
@@ -49,7 +50,7 @@ export default function PrivacyPage() {
   const lastUpdated = '2025年1月11日';
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-[#0a0a0a]">
       {/* Header */}
       <header className="border-b border-[#eaeaea] dark:border-[#333]">
         <div className="max-w-4xl mx-auto px-6 py-4">
@@ -72,7 +73,7 @@ export default function PrivacyPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      <main className="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -226,27 +227,7 @@ export default function PrivacyPage() {
         </motion.div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#eaeaea] dark:border-[#333] mt-12">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-[#666] dark:text-[#8f8f8f]" />
-              <span className="text-sm text-[#666] dark:text-[#8f8f8f]">
-                Pleno Audit
-              </span>
-            </div>
-            <div className="flex items-center gap-6 text-sm text-[#666] dark:text-[#8f8f8f]">
-              <Link to="/terms" className="hover:text-[#171717] dark:hover:text-[#ededed] transition-colors">
-                利用規約
-              </Link>
-              <Link to="/docs" className="hover:text-[#171717] dark:hover:text-[#ededed] transition-colors">
-                ドキュメント
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
