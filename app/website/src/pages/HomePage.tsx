@@ -166,12 +166,11 @@ const HeroSection = () => (
         transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
       >
         <div className="relative z-10 mx-auto max-w-5xl overflow-hidden rounded-2xl border border-[#eaeaea] dark:border-[#333] bg-white dark:bg-[#171717] p-2 shadow-lg dark:shadow-none">
-          <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-gradient-to-br from-[#f5f5f5] to-[#e5e5e5] dark:from-[#1a1a1a] dark:to-[#0a0a0a]">
-            <div className="flex flex-col items-center gap-4">
-              <Lock className="h-16 w-16 text-[#171717] dark:text-[#ededed]" />
-              <p className="text-sm text-[#666] dark:text-[#8f8f8f]">Security Dashboard</p>
-            </div>
-          </div>
+          <img
+            src={`${import.meta.env.BASE_URL}dashboard.png`}
+            alt="Security Dashboard"
+            className="w-full rounded-xl"
+          />
         </div>
       </motion.div>
     </div>
