@@ -9,16 +9,16 @@ export default defineConfig({
     version: "0.0.1",
     description: "Personal Browser Security",
     icons: {
-      16: "icon.svg",
-      32: "icon.svg",
-      48: "icon.svg",
-      128: "icon.svg",
+      16: "icon-16.png",
+      32: "icon-32.png",
+      48: "icon-48.png",
+      128: "icon-128.png",
     },
     action: {
       default_icon: {
-        16: "icon.svg",
-        32: "icon.svg",
-        48: "icon.svg",
+        16: "icon-16.png",
+        32: "icon-32.png",
+        48: "icon-48.png",
       },
     },
     permissions: ["cookies", "storage", "activeTab", "alarms", "offscreen", "scripting", "webRequest", "management"],
