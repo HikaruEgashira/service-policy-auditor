@@ -164,9 +164,14 @@ export function useThemeState(): ThemeContextValue {
   const isDark = mode === "dark" || (mode === "system" && systemDark);
   const colors = isDark ? darkColors : lightColors;
 
-  // Update CSS variables for scrollbar
+  // Update CSS variables for theme
   useEffect(() => {
     const root = document.documentElement;
+    // Background and text colors
+    root.style.setProperty("--bg-primary", colors.bgPrimary);
+    root.style.setProperty("--bg-secondary", colors.bgSecondary);
+    root.style.setProperty("--text-primary", colors.textPrimary);
+    // Scrollbar colors
     root.style.setProperty("--scrollbar-track", colors.scrollbar.track);
     root.style.setProperty("--scrollbar-thumb", colors.scrollbar.thumb);
     root.style.setProperty("--scrollbar-thumb-hover", colors.scrollbar.thumbHover);
