@@ -687,10 +687,21 @@ export default defineBackground(() => {
             const validEntities = result.entities.filter(e => e.entity_type != null && e.entity_type !== "");
             if (validEntities.length > 0) {
               const entityTypes = [...new Set(validEntities.map(e => e.entity_type))];
-              const sorted = [...validEntities].sort((a, b) => b.start - a.start);
               let masked = data.text!;
-              for (const ent of sorted) {
-                masked = masked.slice(0, ent.start) + `[${ent.entity_type}]` + masked.slice(ent.end);
+              const entitiesWithOffsets = validEntities.filter(e => e.start != null && e.end != null);
+              if (entitiesWithOffsets.length > 0) {
+                // Offset-based masking (preserves original positions)
+                const sorted = [...entitiesWithOffsets].sort((a, b) => b.start! - a.start!);
+                for (const ent of sorted) {
+                  masked = masked.slice(0, ent.start) + `[${ent.entity_type}]` + masked.slice(ent.end);
+                }
+              } else {
+                // Word-based masking fallback (Transformers.js 4.x: no character offsets)
+                for (const ent of validEntities) {
+                  if (ent.text) {
+                    masked = masked.replaceAll(ent.text, `[${ent.entity_type}]`);
+                  }
+                }
               }
               const maskedSample = masked.length > 200 ? masked.slice(0, 200) + "…" : masked;
               await backgroundAlerts.getAlertManager().alertDLPPIIDetected({

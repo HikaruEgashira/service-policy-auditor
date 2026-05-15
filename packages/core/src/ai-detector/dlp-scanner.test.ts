@@ -114,6 +114,33 @@ describe("createDLPScanner", () => {
     expect(result).toBeNull();
   });
 
+  it("scan handles Transformers.js 4.x grouped output without start/end offsets", async () => {
+    // Transformers.js 4.x groupEntities() omits start/end ("TODO: Add support for start and end")
+    const pipelineResults = [
+      { entity_group: "PERSON", score: 0.95, word: "田中太郎" },
+      { entity_group: "EMAIL_ADDRESS", score: 0.99, word: "tanaka@example.com" },
+    ];
+    mockPipeline.mockResolvedValue(pipelineResults);
+
+    const scanner = createDLPScanner({ enabled: true });
+    await scanner.initPipeline();
+    const result = await scanner.scan(
+      "田中太郎 tanaka@example.com",
+      "clipboard",
+      "example.com",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.entities).toHaveLength(2);
+    expect(result!.entities[0]!.entity_type).toBe("PERSON");
+    expect(result!.entities[0]!.start).toBeUndefined();
+    expect(result!.entities[0]!.end).toBeUndefined();
+    // Falls back to word field when start/end are absent
+    expect(result!.entities[0]!.text).toBe("田中太郎");
+    expect(result!.entities[1]!.entity_type).toBe("EMAIL_ADDRESS");
+    expect(result!.entities[1]!.text).toBe("tanaka@example.com");
+  });
+
   it("scan truncates long text", async () => {
     mockPipeline.mockResolvedValue([]);
     const scanner = createDLPScanner({ enabled: true });

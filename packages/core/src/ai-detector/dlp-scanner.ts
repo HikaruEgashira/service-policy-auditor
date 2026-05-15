@@ -16,8 +16,10 @@ export type ScanContext = "clipboard" | "form" | "ai_prompt";
 /** 検出されたエンティティ */
 export interface DLPEntity {
   entity_type: string;
-  start: number;
-  end: number;
+  /** character offset (absent in Transformers.js 4.x grouped output) */
+  start?: number;
+  /** character offset (absent in Transformers.js 4.x grouped output) */
+  end?: number;
   score: number;
   text: string;
 }
@@ -81,8 +83,9 @@ interface TokenClassificationResult {
   entity_group: string;
   score: number;
   word: string;
-  start: number;
-  end: number;
+  /** Transformers.js 4.x の grouped 出力では返されない ("TODO: Add support for start and end") */
+  start?: number;
+  end?: number;
 }
 
 type NERPipeline = (
@@ -167,7 +170,8 @@ export function createDLPScanner(initialConfig?: Partial<DLPServerConfig>): DLPS
           start: r.start,
           end: r.end,
           score: r.score,
-          text: trimmed.slice(r.start, r.end),
+          // Transformers.js 4.x grouped output omits start/end; fall back to word
+          text: r.start != null && r.end != null ? trimmed.slice(r.start, r.end) : r.word,
         }));
 
       if (entities.length === 0) {
