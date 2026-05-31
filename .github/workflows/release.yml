@@ -5,6 +5,12 @@ on:
     branches:
       - main
 
+# Serialize releases on main so concurrent pushes don't race on tag creation.
+# Never cancel an in-progress release (it signs artifacts and cuts releases).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions: {}
 
 jobs:
