@@ -1,8 +1,11 @@
 name: Publish
 
+# Trusted publishing is triggered by a dedicated `libztbs-v*` tag, not by
+# every main push. Push such a tag (matching packages/core/package.json
+# version) to release, e.g. `git tag libztbs-v1.3.0 && git push --tags`.
 on:
   push:
-    branches: [main]
+    tags: ["libztbs-v*"]
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -34,8 +37,25 @@ jobs:
       - name: Build packages
         run: pnpm --filter libztbs build
 
+      - name: Verify tag matches package version
+        working-directory: packages/core
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#libztbs-v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match packages/core/package.json ($PKG_VERSION)"
+            exit 1
+          fi
+
       - name: Publish packages to npm
         working-directory: packages/core
-        run: npx -y npm@11 publish --access public --provenance
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view "libztbs@${PKG_VERSION}" version 2>/dev/null || true)
+          if [ -n "$PUBLISHED" ]; then
+            echo "libztbs@${PKG_VERSION} is already published, skipping."
+            exit 0
+          fi
+          npx -y npm@11 publish --access public --provenance
         env:
           NPM_CONFIG_PROVENANCE: "true"
