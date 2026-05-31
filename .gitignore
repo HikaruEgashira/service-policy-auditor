@@ -9,6 +9,7 @@ vite.config.js
 
 *.local.md
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 app/audit-extension/public/sql-wasm.wasm
 
 # Scan data (raw results from security scanners)
