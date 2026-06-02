@@ -15,12 +15,12 @@
   "dependencies": {
     "libztbs": "workspace:*",
     "commander": "^14.0.3",
-    "ws": "^8.20.0"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.9.1",
     "@types/ws": "^8.18.0",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }
