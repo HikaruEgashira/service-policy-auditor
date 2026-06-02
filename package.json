@@ -37,22 +37,22 @@
     }
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/typescript-checker": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/preact": "^3.2.4",
-    "@types/chrome": "^0.1.40",
-    "@vitest/coverage-v8": "^4.1.5",
+    "@types/chrome": "^0.1.42",
+    "@vitest/coverage-v8": "^4.1.8",
     "concurrently": "^9.1.2",
-    "fast-check": "^4.7.0",
+    "fast-check": "^4.8.0",
     "jsdom": "^29.1.1",
-    "oxlint": "^1.62.0",
+    "oxlint": "^1.68.0",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.5",
-    "ws": "^8.20.0"
+    "vitest": "^4.1.8",
+    "ws": "^8.21.0"
   }
 }
