@@ -21,7 +21,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -106,13 +106,14 @@ jobs:
           set -e
           VERSION=$(node -p "require('./app/audit-extension/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
+          tag_name: canary
+          name: "Canary (${{ steps.version.outputs.version }})"
+          prerelease: true
+          make_latest: false
           files: |
             pleno-audit-chrome.zip
             pleno-audit-chrome.zip.sigstore.json
@@ -125,20 +126,3 @@ jobs:
             checksums.txt
             checksums.txt.sigstore.json
           generate_release_notes: true
-          make_latest: true
-
-      - name: Cleanup old releases
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
-          KEEP_COUNT=10
-
-          gh release list --limit 1000 --json tagName,createdAt \
-            --jq "[.[] | select(.tagName | test(\"^v${VERSION}-[a-f0-9]+$\"))] | sort_by(.createdAt) | reverse | .[${KEEP_COUNT}:] | .[].tagName" \
-            | while read -r tag; do
-              if [ -n "$tag" ]; then
-                gh release delete "$tag" --yes --cleanup-tag || echo "Failed to delete: $tag"
-              fi
-            done
