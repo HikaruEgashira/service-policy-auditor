@@ -16,8 +16,8 @@
     "libztbs": "workspace:*"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
-    "playwright": "^1.60.0",
+    "@playwright/test": "^1.61.1",
+    "playwright": "^1.61.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
